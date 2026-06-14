@@ -1,0 +1,23 @@
+{
+    "schemaVersion": 1,
+    "contentType": "narrative-sequence",
+    "id": "narrative-shift-01-intro",
+    "title": "Rookie Desk Briefing",
+    "trigger": "shift-intro",
+    "panels": [
+        {
+            "id": "panel-rookie-briefing-001",
+            "speaker": "Release Manager",
+            "mood": "briefing",
+            "title": "Welcome to the release desk.",
+            "body": "Your job is not to stop every release. Your job is to find the evidence that tells us whether the risk is acceptable."
+        },
+        {
+            "id": "panel-rookie-briefing-002",
+            "speaker": "Release Manager",
+            "mood": "warning",
+            "title": "Do not guess.",
+            "body": "Every finding should be supported by evidence. Unsupported findings waste review time and weaken the final verdict."
+        }
+    ]
+}

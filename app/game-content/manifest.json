@@ -1,0 +1,9 @@
+{
+    "schemaVersion": 1,
+    "contentType": "content-pack-manifest",
+    "contentPackId": "releaseguard-core-mvp",
+    "title": "ReleaseGuard Core MVP Content Pack",
+    "defaultShiftId": "shift-01-rookie-desk",
+    "minimumTicketVariants": 8,
+    "minimumShifts": 5
+}

@@ -1,0 +1,12 @@
+{
+    "schemaVersion": 1,
+    "contentType": "shift-definition",
+    "id": "shift-01-rookie-desk",
+    "title": "Rookie Desk",
+    "subtitle": "First day on release review.",
+    "sequence": 1,
+    "difficultyBand": [1, 2],
+    "ticketIds": ["ticket-password-reset-missing-expiry"],
+    "introNarrativeId": "narrative-shift-01-intro",
+    "isUnlockedByDefault": true
+}

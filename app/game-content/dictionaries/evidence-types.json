@@ -1,0 +1,18 @@
+[
+    {
+        "id": "qa-note",
+        "label": "QA Note"
+    },
+    {
+        "id": "pull-request-comment",
+        "label": "Pull Request Comment"
+    },
+    {
+        "id": "support-ticket",
+        "label": "Support Ticket"
+    },
+    {
+        "id": "release-note",
+        "label": "Release Note"
+    }
+]

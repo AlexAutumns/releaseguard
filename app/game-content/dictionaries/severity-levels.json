@@ -1,0 +1,22 @@
+[
+    {
+        "id": "low",
+        "label": "Low",
+        "scoreWeight": 1
+    },
+    {
+        "id": "medium",
+        "label": "Medium",
+        "scoreWeight": 2
+    },
+    {
+        "id": "high",
+        "label": "High",
+        "scoreWeight": 3
+    },
+    {
+        "id": "critical",
+        "label": "Critical",
+        "scoreWeight": 4
+    }
+]

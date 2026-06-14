@@ -1,0 +1,27 @@
+[
+    {
+        "id": "security",
+        "label": "Security",
+        "description": "Risk involving access control, authentication, authorization, abuse, or exploitability."
+    },
+    {
+        "id": "quality",
+        "label": "Quality",
+        "description": "Risk involving broken behaviour, incomplete requirements, regression, or reliability."
+    },
+    {
+        "id": "privacy",
+        "label": "Privacy",
+        "description": "Risk involving personal data exposure, incorrect data handling, or unclear user-data behaviour."
+    },
+    {
+        "id": "operations",
+        "label": "Operations",
+        "description": "Risk involving deployment, monitoring, rollback, configuration, or production support."
+    },
+    {
+        "id": "testing",
+        "label": "Testing",
+        "description": "Risk involving missing, weak, or incomplete validation before release."
+    }
+]
