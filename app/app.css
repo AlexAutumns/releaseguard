@@ -1,15 +1,76 @@
 @import "tailwindcss";
 
+/**
+ * ReleaseGuard Tailwind theme tokens.
+ *
+ * Tailwind v4 reads these @theme variables and generates matching utilities
+ * such as bg-rg-paper, text-rg-ink, border-rg-folder, and font-sans.
+ *
+ * Keep this file focused on global tokens and base page styling. Repeated UI
+ * patterns should usually become React components instead of large CSS classes.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-sans:
+        "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+
+    --font-mono:
+        "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+        monospace;
+
+    --color-rg-ink: #2d241c;
+    --color-rg-muted: #6d5d4d;
+    --color-rg-paper: #f7efe2;
+    --color-rg-paper-strong: #fffaf1;
+    --color-rg-folder: #e5c28e;
+    --color-rg-folder-dark: #9d7241;
+    --color-rg-cork: #b87945;
+    --color-rg-cork-dark: #7d4d2c;
+    --color-rg-accent: #315f52;
+    --color-rg-accent-dark: #24473e;
+    --color-rg-danger: #9d4f3a;
+    --color-rg-warning: #c7792b;
+    --color-rg-success: #3f7b55;
+    --color-rg-info: #416b8a;
 }
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+/**
+ * Global base styling.
+ *
+ * The MVP is desktop-first, but this background is still safe for smaller
+ * screens. Avoid putting component-specific styling here unless it truly needs
+ * to be global.
+ */
+html {
+    min-height: 100%;
+    background:
+        radial-gradient(
+            circle at top left,
+            rgb(184 121 69 / 24%),
+            transparent 32rem
+        ),
+        linear-gradient(135deg, #f6ead8 0%, #ead7ba 100%);
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+body {
+    min-height: 100%;
+    margin: 0;
+    color: #2d241c;
+    font-family: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
 }
