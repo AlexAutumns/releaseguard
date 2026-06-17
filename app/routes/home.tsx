@@ -1,13 +1,26 @@
+import { TitleScreen } from "../screens/title/TitleScreen";
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
 
+/**
+ * Metadata for the title screen route.
+ */
 export function meta({}: Route.MetaArgs) {
-  return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
-  ];
+    return [
+        { title: "ReleaseGuard" },
+        {
+            name: "description",
+            content:
+                "ReleaseGuard is a gamified software release-risk investigation simulator.",
+        },
+    ];
 }
 
-export default function Home() {
-  return <Welcome />;
+/**
+ * Index route for the application.
+ *
+ * This route intentionally stays thin. The title screen UI lives in
+ * app/screens/title/TitleScreen.tsx so this route does not become the whole app.
+ */
+export default function HomeRoute() {
+    return <TitleScreen />;
 }
