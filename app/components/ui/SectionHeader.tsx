@@ -9,13 +9,14 @@ export interface SectionHeaderProps {
     meta?: ReactNode;
     actions?: ReactNode;
     className?: string;
+    tone?: "dark" | "paper";
 }
 
 /**
  * Shared section header for panels and screen sections.
  *
- * This keeps Evidence, Notebook, Board, and Report headings consistent without
- * forcing each feature component to repeat title layout classes.
+ * Use tone="paper" only when the header is placed inside an aged-paper object.
+ * Most app screens should use the default dark tone.
  */
 export function SectionHeader({
     eyebrow,
@@ -24,7 +25,10 @@ export function SectionHeader({
     meta,
     actions,
     className,
+    tone = "dark",
 }: SectionHeaderProps) {
+    const isPaper = tone === "paper";
+
     return (
         <div
             className={cn(
@@ -34,20 +38,35 @@ export function SectionHeader({
         >
             <div>
                 {eyebrow && (
-                    <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.18em] text-rg-accent">
+                    <p
+                        className={cn(
+                            "mb-1 font-mono text-xs font-extrabold uppercase tracking-[0.18em]",
+                            isPaper ? "text-rg-folder-dark" : "text-rg-amber",
+                        )}
+                    >
                         {eyebrow}
                     </p>
                 )}
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-2xl font-black tracking-[-0.04em] text-rg-ink">
+                    <h2
+                        className={cn(
+                            "text-2xl font-black tracking-[-0.04em]",
+                            isPaper ? "text-rg-paper-ink" : "text-rg-text",
+                        )}
+                    >
                         {title}
                     </h2>
                     {meta}
                 </div>
 
                 {description && (
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-rg-muted">
+                    <p
+                        className={cn(
+                            "mt-2 max-w-2xl text-sm leading-6",
+                            isPaper ? "text-rg-paper-muted" : "text-rg-muted",
+                        )}
+                    >
                         {description}
                     </p>
                 )}

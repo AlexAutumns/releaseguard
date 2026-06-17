@@ -13,8 +13,8 @@ export type BadgeTone =
 /**
  * Reusable badge primitive for short labels and status markers.
  *
- * This component is deliberately generic. Gameplay-specific meaning should come
- * from the text passed into the badge, not from the badge itself.
+ * The visual style is intentionally muted and stamped-looking so badges feel
+ * like case labels rather than bright SaaS status pills.
  */
 export function Badge({
     tone = "neutral",
@@ -26,19 +26,19 @@ export function Badge({
     return (
         <span
             className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold uppercase tracking-wide",
+                "inline-flex items-center rounded-md border px-2.5 py-1 font-mono text-[0.68rem] font-bold uppercase tracking-[0.16em]",
                 {
-                    "border-rg-folder bg-rg-paper-strong text-rg-muted":
+                    "border-rg-border-soft bg-rg-surface-raised text-rg-muted":
                         tone === "neutral",
-                    "border-rg-success/30 bg-rg-success/10 text-rg-success":
+                    "border-rg-success/45 bg-rg-success/12 text-rg-success":
                         tone === "success",
-                    "border-rg-warning/35 bg-rg-warning/10 text-rg-warning":
+                    "border-rg-warning/45 bg-rg-warning/12 text-rg-warning":
                         tone === "warning",
-                    "border-rg-danger/35 bg-rg-danger/10 text-rg-danger":
+                    "border-rg-danger/45 bg-rg-danger/12 text-rg-danger":
                         tone === "danger",
-                    "border-rg-info/35 bg-rg-info/10 text-rg-info":
+                    "border-rg-info/45 bg-rg-info/12 text-rg-info":
                         tone === "info",
-                    "border-rg-cork/35 bg-rg-cork/10 text-rg-cork-dark":
+                    "border-rg-cork bg-rg-cork/22 text-rg-paper-strong":
                         tone === "cork",
                 },
                 className,

@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 /**
- * ReleaseGuard Tailwind theme tokens.
+ * ReleaseGuard noir theme tokens.
  *
- * Tailwind v4 reads these @theme variables and generates matching utilities
- * such as bg-rg-paper, text-rg-ink, border-rg-folder, and font-sans.
- *
- * Keep this file focused on global tokens and base page styling. Repeated UI
- * patterns should usually become React components instead of large CSS classes.
+ * Visual rule:
+ * - Default game environment is dark noir.
+ * - The active play space sits on a dark wood desk.
+ * - Paper/folder tones are physical evidence objects, not the page background.
+ * - Red is reserved for verdict/stamp/danger moments.
+ * - Amber is used as desk-lamp / investigation accent.
  */
 @theme {
     --font-sans:
@@ -19,45 +20,137 @@
         "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
         monospace;
 
-    --color-rg-ink: #2d241c;
-    --color-rg-muted: #6d5d4d;
-    --color-rg-paper: #f7efe2;
-    --color-rg-paper-strong: #fffaf1;
-    --color-rg-folder: #e5c28e;
-    --color-rg-folder-dark: #9d7241;
-    --color-rg-cork: #b87945;
-    --color-rg-cork-dark: #7d4d2c;
-    --color-rg-accent: #315f52;
-    --color-rg-accent-dark: #24473e;
-    --color-rg-danger: #9d4f3a;
-    --color-rg-warning: #c7792b;
-    --color-rg-success: #3f7b55;
-    --color-rg-info: #416b8a;
+    --color-rg-night: #090807;
+    --color-rg-night-soft: #100d0b;
+
+    --color-rg-surface: #17120f;
+    --color-rg-surface-raised: #241b16;
+    --color-rg-surface-soft: #30241c;
+
+    --color-rg-border: #47372c;
+    --color-rg-border-soft: #66503e;
+
+    --color-rg-text: #f2e7d5;
+    --color-rg-muted: #aa967c;
+    --color-rg-faint: #7e6852;
+
+    /**
+   * Legacy alias kept so older temporary skeleton classes do not break.
+   * New dark UI should prefer text-rg-text.
+   */
+    --color-rg-ink: #f2e7d5;
+
+    --color-rg-paper: #d8c093;
+    --color-rg-paper-strong: #ead4a7;
+    --color-rg-paper-ink: #251a12;
+    --color-rg-paper-muted: #6f563d;
+
+    --color-rg-notepad: #d4bd83;
+    --color-rg-notepad-strong: #e0cc98;
+    --color-rg-notepad-line: #8b6e46;
+
+    --color-rg-folder: #8b5f35;
+    --color-rg-folder-dark: #5b3b24;
+
+    --color-rg-wood: #2a140b;
+    --color-rg-wood-dark: #140805;
+    --color-rg-wood-light: #5b2f1e;
+
+    --color-rg-cork: #6b452c;
+    --color-rg-cork-dark: #3f291d;
+
+    --color-rg-stamp: #a13d2d;
+    --color-rg-stamp-dark: #6f231d;
+
+    --color-rg-amber: #d6a044;
+    --color-rg-terminal: #6cae94;
+    --color-rg-info: #6d8fa8;
+    --color-rg-success: #66955a;
+    --color-rg-warning: #d6a044;
+    --color-rg-danger: #ba4a36;
+
+    /**
+   * Legacy alias kept for earlier component variants.
+   * New UI should prefer rg-amber or rg-terminal depending on meaning.
+   */
+    --color-rg-accent: #d6a044;
+    --color-rg-accent-dark: #9f6d2b;
 }
 
-/**
- * Global base styling.
- *
- * The MVP is desktop-first, but this background is still safe for smaller
- * screens. Avoid putting component-specific styling here unless it truly needs
- * to be global.
- */
+* {
+    box-sizing: border-box;
+}
+
 html {
     min-height: 100%;
     background:
         radial-gradient(
-            circle at top left,
-            rgb(184 121 69 / 24%),
-            transparent 32rem
+            circle at 18% 8%,
+            rgb(214 160 68 / 16%),
+            transparent 22rem
         ),
-        linear-gradient(135deg, #f6ead8 0%, #ead7ba 100%);
+        radial-gradient(
+            circle at 92% 20%,
+            rgb(161 61 45 / 10%),
+            transparent 24rem
+        ),
+        radial-gradient(
+            circle at 50% 120%,
+            rgb(108 69 44 / 22%),
+            transparent 30rem
+        ),
+        linear-gradient(135deg, #050403 0%, #100d0b 48%, #070605 100%);
 }
 
 body {
+    position: relative;
     min-height: 100%;
     margin: 0;
-    color: #2d241c;
+    overflow-x: hidden;
+    color: #f2e7d5;
     font-family: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/**
+ * Global noir texture overlay.
+ *
+ * This avoids external texture assets and licensing risk. The overlay is subtle
+ * enough to add grit without hurting readability.
+ */
+body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    content: "";
+    background:
+        linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(255 255 255 / 1.5%) 1px, transparent 1px),
+        radial-gradient(circle at center, transparent 0%, rgb(0 0 0 / 46%) 78%);
+    background-size:
+        100% 4px,
+        5px 100%,
+        100% 100%;
+    opacity: 0.7;
+}
+
+body::after {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    content: "";
+    background-image:
+        radial-gradient(circle, rgb(255 255 255 / 7%) 0 1px, transparent 1px),
+        radial-gradient(circle, rgb(0 0 0 / 16%) 0 1px, transparent 1px);
+    background-position:
+        0 0,
+        13px 17px;
+    background-size:
+        29px 31px,
+        37px 41px;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
 }
 
 button,
@@ -73,4 +166,93 @@ button {
 
 button:disabled {
     cursor: not-allowed;
+}
+
+/**
+ * Reusable texture utilities.
+ *
+ * These are intentionally CSS utilities instead of image assets. They give the
+ * MVP grit and physicality without introducing asset licensing risk.
+ */
+.rg-wood-texture {
+    background-image:
+        linear-gradient(90deg, rgb(255 220 160 / 5%) 0 1px, transparent 1px),
+        repeating-linear-gradient(
+            7deg,
+            rgb(255 218 150 / 4%) 0 9px,
+            rgb(0 0 0 / 10%) 9px 18px,
+            transparent 18px 32px
+        ),
+        linear-gradient(135deg, rgb(91 47 30 / 55%), rgb(20 8 5 / 92%));
+    background-blend-mode: overlay, multiply, normal;
+}
+
+.rg-surface-grit {
+    background-image:
+        radial-gradient(
+            circle at top left,
+            rgb(214 160 68 / 10%),
+            transparent 18rem
+        ),
+        linear-gradient(135deg, rgb(255 255 255 / 4%), transparent),
+        radial-gradient(circle, rgb(255 255 255 / 6%) 0 1px, transparent 1px);
+    background-size:
+        100% 100%,
+        100% 100%,
+        19px 23px;
+}
+
+.rg-paper-grain {
+    background-image:
+        linear-gradient(90deg, rgb(37 26 18 / 8%) 1px, transparent 1px),
+        linear-gradient(rgb(37 26 18 / 5%) 1px, transparent 1px),
+        radial-gradient(circle, rgb(37 26 18 / 12%) 0 1px, transparent 1px);
+    background-size:
+        18px 18px,
+        18px 18px,
+        21px 24px;
+}
+
+.rg-notepad-texture {
+    background-image:
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent 27px,
+            rgb(139 110 70 / 28%) 28px,
+            transparent 29px
+        ),
+        linear-gradient(90deg, rgb(161 61 45 / 24%) 0 2px, transparent 2px),
+        radial-gradient(circle, rgb(37 26 18 / 12%) 0 1px, transparent 1px);
+    background-position:
+        0 12px,
+        52px 0,
+        0 0;
+    background-size:
+        100% 30px,
+        100% 100%,
+        24px 27px;
+}
+
+.rg-cork-grain {
+    background-image:
+        radial-gradient(circle, rgb(255 250 241 / 12%) 0 1px, transparent 1px),
+        radial-gradient(circle, rgb(0 0 0 / 16%) 0 1px, transparent 1px),
+        linear-gradient(135deg, rgb(107 69 44), rgb(63 41 29));
+    background-position:
+        0 0,
+        9px 11px,
+        0 0;
+    background-size:
+        15px 17px,
+        21px 23px,
+        100% 100%;
+}
+
+.rg-danger-stripes {
+    background-image: repeating-linear-gradient(
+        -12deg,
+        rgb(161 61 45 / 12%) 0 8px,
+        transparent 8px 16px
+    );
 }

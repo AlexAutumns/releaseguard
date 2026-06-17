@@ -35,11 +35,11 @@ export function TicketResultScreen({ attemptId }: TicketResultScreenProps) {
                     </Link>
                 </>
             }
-            description="This placeholder route will later show score breakdown, matched findings, missed findings, and consequence panels."
+            description="This route will later show score breakdown, matched findings, missed findings, and consequence panels."
             eyebrow="Ticket Report"
-            title="Ticket Result"
+            title="Verdict Report"
         >
-            <Panel tone="strong">
+            <Panel tone="raised">
                 <SectionHeader
                     eyebrow="Saved Attempt"
                     meta={
@@ -51,10 +51,9 @@ export function TicketResultScreen({ attemptId }: TicketResultScreenProps) {
                 />
 
                 <p className="text-sm leading-6 text-rg-muted">
-                    The save repository is not implemented yet. In a later
-                    build, verdict submission will score the attempt, save the
-                    report locally, and navigate here using the generated
-                    attempt ID.
+                    The save repository is not implemented yet. Later, verdict
+                    submission will score the attempt, save the report locally,
+                    and navigate here using the generated attempt ID.
                 </p>
             </Panel>
         </ScreenShell>

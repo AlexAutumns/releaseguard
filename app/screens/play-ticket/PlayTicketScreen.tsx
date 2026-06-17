@@ -62,27 +62,19 @@ export function PlayTicketScreen({
     return (
         <ScreenShell
             actions={
-                <>
-                    <Link
-                        className={buttonClassName({ variant: "ghost" })}
-                        to="/desk"
-                    >
-                        Back to Desk
-                    </Link>
-                    <Link
-                        className={buttonClassName({ variant: "secondary" })}
-                        to="/results/ticket/demo-attempt"
-                    >
-                        Preview Result Route
-                    </Link>
-                </>
+                <Link
+                    className={buttonClassName({ variant: "ghost" })}
+                    to="/desk"
+                >
+                    Back to Case Desk
+                </Link>
             }
-            description="This placeholder confirms the gameplay route can load shift, ticket, family, and baseline content."
+            description="Inspect the release context, review the evidence deck, and prepare the case before stamping a verdict."
             eyebrow={shift.title}
             title={ticket.title}
         >
-            <div className="grid gap-5 lg:grid-cols-[1fr_0.85fr]">
-                <Panel tone="strong">
+            <div className="grid gap-5 2xl:grid-cols-[0.9fr_1.35fr_0.9fr]">
+                <Panel className="min-h-[420px]" tone="notepad">
                     <SectionHeader
                         eyebrow="Ticket Briefing"
                         meta={
@@ -91,74 +83,33 @@ export function PlayTicketScreen({
                             </Badge>
                         }
                         title="Release Context"
+                        tone="paper"
                     />
 
-                    <p className="text-base leading-8 text-rg-muted">
-                        {ticket.briefing}
-                    </p>
+                    <div className="space-y-5 pl-10 text-sm leading-7 text-rg-paper-muted">
+                        <p>{ticket.briefing}</p>
 
-                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-rg-folder bg-rg-paper p-4">
-                            <p className="text-xs font-extrabold uppercase tracking-wide text-rg-muted">
+                        <div>
+                            <p className="font-mono text-xs font-extrabold uppercase tracking-wide text-rg-folder-dark">
                                 Product Area
                             </p>
-                            <p className="mt-1 font-bold text-rg-ink">
+                            <p className="mt-1 font-bold text-rg-paper-ink">
                                 {ticket.productArea}
                             </p>
                         </div>
 
-                        <div className="rounded-2xl border border-rg-folder bg-rg-paper p-4">
-                            <p className="text-xs font-extrabold uppercase tracking-wide text-rg-muted">
+                        <div>
+                            <p className="font-mono text-xs font-extrabold uppercase tracking-wide text-rg-folder-dark">
                                 Variant Type
                             </p>
-                            <p className="mt-1 font-bold text-rg-ink">
+                            <p className="mt-1 font-bold text-rg-paper-ink">
                                 {ticket.variantKind}
                             </p>
                         </div>
                     </div>
                 </Panel>
 
-                <Panel tone="paper">
-                    <SectionHeader
-                        eyebrow="Content Links"
-                        title="Family and Baseline"
-                    />
-
-                    <div className="grid gap-4">
-                        <div>
-                            <p className="text-xs font-extrabold uppercase tracking-wide text-rg-muted">
-                                Ticket Family
-                            </p>
-                            <p className="mt-1 font-bold text-rg-ink">
-                                {family?.title ?? "Missing family"}
-                            </p>
-                            {family?.description && (
-                                <p className="mt-2 text-sm leading-6 text-rg-muted">
-                                    {family.description}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <p className="text-xs font-extrabold uppercase tracking-wide text-rg-muted">
-                                Baseline Reference
-                            </p>
-                            <p className="mt-1 font-bold text-rg-ink">
-                                {familyReference?.title ??
-                                    "Missing baseline reference"}
-                            </p>
-                            {familyReference?.purpose && (
-                                <p className="mt-2 text-sm leading-6 text-rg-muted">
-                                    {familyReference.purpose}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </Panel>
-            </div>
-
-            <div className="mt-5 grid gap-5 lg:grid-cols-3">
-                <Panel tone="paper">
+                <Panel className="min-h-[420px]" tone="paper">
                     <SectionHeader
                         eyebrow="Evidence"
                         meta={
@@ -167,53 +118,76 @@ export function PlayTicketScreen({
                             </Badge>
                         }
                         title="Evidence Deck"
+                        tone="paper"
                     />
 
-                    <ul className="grid gap-3">
+                    <div className="grid gap-3 lg:grid-cols-2">
                         {ticket.evidenceCards.map((evidenceCard) => (
-                            <li
-                                className="rounded-2xl border border-rg-folder bg-rg-paper-strong p-4"
+                            <article
+                                className="rounded-2xl border border-rg-folder-dark/35 bg-rg-paper-strong/70 p-4 shadow-md shadow-rg-paper-ink/10"
                                 key={evidenceCard.id}
                             >
-                                <p className="font-black text-rg-ink">
+                                <p className="font-black text-rg-paper-ink">
                                     {evidenceCard.title}
                                 </p>
-                                <p className="mt-1 text-sm text-rg-muted">
+                                <p className="mt-1 font-mono text-xs uppercase tracking-[0.14em] text-rg-paper-muted">
                                     {evidenceCard.source}
                                 </p>
-                            </li>
+                                <p className="mt-3 line-clamp-4 text-sm leading-6 text-rg-paper-muted">
+                                    {evidenceCard.body}
+                                </p>
+                            </article>
                         ))}
-                    </ul>
+                    </div>
                 </Panel>
 
-                <Panel tone="paper">
+                <div className="grid gap-5">
+                    <Panel tone="cork">
+                        <SectionHeader
+                            eyebrow="Board"
+                            meta={<Badge tone="neutral">0 pinned</Badge>}
+                            title="Pinned Clues"
+                        />
+
+                        <EmptyState
+                            description="Pinned evidence will appear here once the board interaction is implemented."
+                            title="No clues pinned"
+                        />
+                    </Panel>
+
+                    <Panel tone="raised">
+                        <SectionHeader eyebrow="Verdict" title="Stamp Desk" />
+
+                        <p className="text-sm leading-6 text-rg-muted">
+                            Verdict stamping will appear here after the gameplay
+                            state system is added.
+                        </p>
+                    </Panel>
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1fr]">
+                <Panel tone="surface">
                     <SectionHeader
-                        eyebrow="Answer Key"
-                        meta={
-                            <Badge tone="warning">
-                                {ticket.expectedFindings.length} finding(s)
-                            </Badge>
-                        }
-                        title="Expected Findings"
+                        eyebrow="Family File"
+                        title={family?.title ?? "Missing family"}
                     />
 
                     <p className="text-sm leading-6 text-rg-muted">
-                        Gameplay scoring will use these expected findings later.
-                        They are shown here only while the route skeleton is
-                        being verified.
+                        {family?.description ??
+                            "The ticket family could not be loaded from the content repository."}
                     </p>
                 </Panel>
 
-                <Panel tone="warning">
+                <Panel tone="surface">
                     <SectionHeader
-                        eyebrow="Next Build"
-                        title="Gameplay State"
+                        eyebrow="Baseline Reference"
+                        title={familyReference?.title ?? "Missing baseline"}
                     />
 
                     <p className="text-sm leading-6 text-rg-muted">
-                        Build 001D will add the ticket attempt reducer. Build
-                        001E will add evidence, board, notebook, and verdict
-                        components.
+                        {familyReference?.purpose ??
+                            "The baseline reference could not be loaded from the content repository."}
                     </p>
                 </Panel>
             </div>

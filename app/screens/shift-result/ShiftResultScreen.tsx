@@ -24,14 +24,14 @@ export function ShiftResultScreen({ shiftRunId }: ShiftResultScreenProps) {
                     className={buttonClassName({ variant: "primary" })}
                     to="/desk"
                 >
-                    Return to Desk
+                    Return to Case Desk
                 </Link>
             }
-            description="This placeholder route will later show shift score, ticket outcomes, and basic progress analytics."
+            description="This route will later show shift score, ticket outcomes, and basic progress analytics."
             eyebrow="Shift Report"
-            title="Shift Summary"
+            title="End-of-Shift Summary"
         >
-            <Panel tone="strong">
+            <Panel tone="raised">
                 <SectionHeader
                     eyebrow="Saved Shift Run"
                     meta={
