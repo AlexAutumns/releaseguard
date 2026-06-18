@@ -15,7 +15,7 @@ import { InvestigationHud } from "./InvestigationHud";
 import { InvestigationRail } from "./InvestigationRail";
 import { InvestigationToolRack } from "./InvestigationToolRack";
 import { InvestigationWorkspaceShell } from "./InvestigationWorkspaceShell";
-import type { InvestigationToolId } from "./investigation-ui-types";
+import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
 import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
 
 export interface InvestigationScreenProps {

@@ -1,52 +1,17 @@
 import { Button } from "../../components/ui/Button";
+import { investigationToolCatalog } from "../../features/gameplay/tools/tool-catalog";
+import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
 import { cn } from "../../lib/cn";
-import type {
-    InvestigationToolDefinition,
-    InvestigationToolId,
-} from "./investigation-ui-types";
 
 export interface InvestigationToolRackProps {
     activeTool: InvestigationToolId;
 }
 
-const toolDefinitions: InvestigationToolDefinition[] = [
-    {
-        id: "select",
-        icon: "⌖",
-        label: "Select",
-        description: "Select pinned evidence or board items.",
-    },
-    {
-        id: "inspect",
-        icon: "⌕",
-        label: "Inspect",
-        description: "Inspect an evidence file before pinning it.",
-    },
-    {
-        id: "pin",
-        icon: "◇",
-        label: "Pin",
-        description: "Pin evidence onto the board.",
-    },
-    {
-        id: "connect",
-        icon: "⛓",
-        label: "Connect",
-        description: "Connect two pinned clues.",
-    },
-    {
-        id: "move",
-        icon: "✥",
-        label: "Move",
-        description: "Move pinned clues around the board.",
-    },
-];
-
 /**
  * Bottom tool rack for the investigation workspace.
  *
- * The current build keeps most tools visually present but inactive. Build 001D
- * will connect these tool IDs to the gameplay attempt reducer.
+ * Build 001D moves tool IDs into gameplay state. Build 001E will connect tool
+ * selection to the attempt reducer.
  */
 export function InvestigationToolRack({
     activeTool,
@@ -63,7 +28,7 @@ export function InvestigationToolRack({
                             Active:{" "}
                             <span className="font-bold text-rg-text">
                                 {
-                                    toolDefinitions.find(
+                                    investigationToolCatalog.find(
                                         (tool) => tool.id === activeTool,
                                     )?.label
                                 }
@@ -73,9 +38,8 @@ export function InvestigationToolRack({
                 </div>
 
                 <div className="flex flex-1 flex-wrap gap-1.5 xl:justify-center">
-                    {toolDefinitions.map((tool) => {
+                    {investigationToolCatalog.map((tool) => {
                         const isActive = tool.id === activeTool;
-                        const isAvailable = tool.id === "select";
 
                         return (
                             <button
@@ -86,14 +50,14 @@ export function InvestigationToolRack({
                                     isActive
                                         ? "border-rg-amber bg-rg-amber text-rg-night shadow-lg shadow-rg-amber/10"
                                         : "border-rg-border-soft bg-rg-surface-raised text-rg-text hover:border-rg-amber/70 hover:bg-rg-surface-soft",
-                                    !isAvailable && "opacity-55",
+                                    !tool.isMvpEnabled && "opacity-55",
                                 )}
-                                disabled={!isAvailable}
+                                disabled={!tool.isMvpEnabled}
                                 key={tool.id}
                                 title={
-                                    isAvailable
+                                    tool.isMvpEnabled
                                         ? tool.description
-                                        : `${tool.description} This tool will activate after gameplay state is added.`
+                                        : `${tool.description} This tool will activate after gameplay state is connected.`
                                 }
                                 type="button"
                             >
@@ -114,7 +78,7 @@ export function InvestigationToolRack({
                         disabled
                         className="h-9"
                         size="sm"
-                        title="Undo is added with gameplay state."
+                        title="Undo is added with gameplay state wiring."
                         variant="secondary"
                     >
                         ↶ Undo
@@ -124,7 +88,7 @@ export function InvestigationToolRack({
                         disabled
                         className="h-9"
                         size="sm"
-                        title="Reset is added with gameplay state."
+                        title="Reset is added with gameplay state wiring."
                         variant="danger"
                     >
                         × Reset
