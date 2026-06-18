@@ -45,6 +45,7 @@ export default function InvestigationRoute() {
         <InvestigationScreen
             family={family}
             familyReference={familyReference}
+            key={`${shiftId}:${ticketId}`}
             requestedShiftId={shiftId}
             requestedTicketId={ticketId}
             shift={shift}
