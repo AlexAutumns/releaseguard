@@ -256,3 +256,117 @@ button:disabled {
         transparent 8px 16px
     );
 }
+
+/**
+ * Noir scrollbar utilities.
+ *
+ * Use these on constrained in-game panels such as evidence cabinets and
+ * notebooks. The investigation workspace should scroll vertically inside
+ * drawers, not horizontally across the whole screen.
+ */
+.rg-scrollbar {
+    overflow-x: hidden;
+    scrollbar-color: rgb(214 160 68 / 55%) rgb(23 18 15 / 85%);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+}
+
+.rg-scrollbar::-webkit-scrollbar {
+    width: 10px;
+}
+
+.rg-scrollbar::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgb(23 18 15 / 82%);
+}
+
+.rg-scrollbar::-webkit-scrollbar-thumb {
+    border: 2px solid rgb(23 18 15 / 82%);
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgb(214 160 68 / 78%),
+        rgb(139 95 53 / 72%)
+    );
+}
+
+.rg-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgb(234 212 167 / 86%),
+        rgb(214 160 68 / 82%)
+    );
+}
+
+/**
+ * Thin variant for narrow rails and compact drawers.
+ */
+.rg-scrollbar-thin {
+    overflow-x: hidden;
+    scrollbar-color: rgb(214 160 68 / 48%) transparent;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+}
+
+.rg-scrollbar-thin::-webkit-scrollbar {
+    width: 7px;
+}
+
+.rg-scrollbar-thin::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: transparent;
+}
+
+.rg-scrollbar-thin::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgb(214 160 68 / 48%);
+}
+
+.rg-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(234 212 167 / 72%);
+}
+
+/**
+ * Code block scrollbar utility.
+ *
+ * Unlike rg-scrollbar, this intentionally allows horizontal scrolling. Use this
+ * only for code/log windows where long technical lines must stay intact.
+ */
+.rg-code-scrollbar {
+    overflow: auto;
+    scrollbar-color: rgb(214 160 68 / 55%) rgb(23 18 15 / 85%);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+}
+
+.rg-code-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.rg-code-scrollbar::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: rgb(23 18 15 / 82%);
+}
+
+.rg-code-scrollbar::-webkit-scrollbar-thumb {
+    border: 2px solid rgb(23 18 15 / 82%);
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgb(214 160 68 / 78%),
+        rgb(139 95 53 / 72%)
+    );
+}
+
+.rg-code-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        rgb(234 212 167 / 86%),
+        rgb(214 160 68 / 82%)
+    );
+}
+
+.rg-code-scrollbar::-webkit-scrollbar-corner {
+    background: rgb(23 18 15 / 82%);
+}

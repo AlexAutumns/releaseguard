@@ -96,7 +96,7 @@ export function Panel({
                 )}
             />
 
-            <div className="relative z-10">{children}</div>
+            <div className="relative z-10 h-full min-h-0">{children}</div>
         </section>
     );
 }

@@ -154,6 +154,26 @@ export interface FamilyReferenceDefinition {
 }
 
 /**
+ * Optional attachment type for evidence cards.
+ *
+ * Attachments keep technical artifacts, such as code snippets or logs, separate
+ * from the evidence summary body. This prevents long code from damaging cabinet
+ * layout while still allowing detailed inspection in the evidence modal.
+ */
+export type EvidenceAttachmentType = "code" | "log" | "note";
+
+/**
+ * Optional technical artifact attached to an evidence card.
+ */
+export interface EvidenceAttachmentDefinition {
+    id: string;
+    type: EvidenceAttachmentType;
+    title: string;
+    body: string;
+    language?: string;
+}
+
+/**
  * One authored evidence item shown during a ticket investigation.
  */
 export interface EvidenceCardDefinition {
@@ -163,6 +183,7 @@ export interface EvidenceCardDefinition {
     source: string;
     body: string;
     riskHints: RiskCategory[];
+    attachments?: EvidenceAttachmentDefinition[];
 }
 
 /**

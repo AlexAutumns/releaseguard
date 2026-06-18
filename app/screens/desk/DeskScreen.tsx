@@ -137,7 +137,7 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
                                                                     "primary",
                                                             },
                                                         )}
-                                                        to={`/play/${shift.id}/${firstTicket.id}`}
+                                                        to={`/tickets/${shift.id}/${firstTicket.id}`}
                                                     >
                                                         Open First Ticket
                                                     </Link>

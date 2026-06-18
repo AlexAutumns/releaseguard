@@ -6,29 +6,30 @@ import {
     getShiftById,
     getTicketById,
 } from "../features/content/content-repository";
-import { PlayTicketScreen } from "../screens/play-ticket/PlayTicketScreen";
-import type { Route } from "./+types/play-ticket";
+import { TicketBriefingScreen } from "../screens/ticket-briefing/TicketBriefingScreen";
+import type { Route } from "./+types/ticket-briefing";
 
 /**
- * Metadata for the play-ticket route.
+ * Metadata for the ticket briefing route.
  */
 export function meta({}: Route.MetaArgs) {
     return [
-        { title: "ReleaseGuard | Ticket Review" },
+        { title: "ReleaseGuard | Ticket Briefing" },
         {
             name: "description",
-            content: "Review a release ticket and prepare a release verdict.",
+            content:
+                "Review a release ticket briefing before opening the investigation desk.",
         },
     ];
 }
 
 /**
- * Ticket gameplay route.
+ * Ticket briefing route.
  *
- * This route reads the route parameters, resolves content through the
- * repository, and passes the resolved data into the play-ticket screen.
+ * This route is not the active gameplay workspace. It lets the player inspect
+ * the release ticket context before starting the interactive investigation.
  */
-export default function PlayTicketRoute() {
+export default function TicketBriefingRoute() {
     const params = useParams();
     const shiftId = params.shiftId ?? "";
     const ticketId = params.ticketId ?? "";
@@ -41,7 +42,7 @@ export default function PlayTicketRoute() {
         : undefined;
 
     return (
-        <PlayTicketScreen
+        <TicketBriefingScreen
             family={family}
             familyReference={familyReference}
             requestedShiftId={shiftId}

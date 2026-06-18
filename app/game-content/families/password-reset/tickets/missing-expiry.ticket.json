@@ -52,7 +52,16 @@
             "title": "Developer Comment",
             "source": "Pull Request Discussion",
             "body": "The token expiry value was temporarily increased to 24 hours to reduce support complaints. We can reduce it later if needed.",
-            "riskHints": ["security"]
+            "riskHints": ["security"],
+            "attachments": [
+                {
+                    "id": "attachment-reset-token-config",
+                    "type": "code",
+                    "language": "ts",
+                    "title": "Reset token configuration",
+                    "body": "const RESET_TOKEN_EXPIRY_HOURS = 24;\nconst RESET_TOKEN_REUSE_ALLOWED = false;\n\nexport function createPasswordResetToken(userId: string, requestedAt: Date) {\n  return {\n    userId,\n    requestedAt,\n    expiresAt: addHours(requestedAt, RESET_TOKEN_EXPIRY_HOURS),\n    reusable: RESET_TOKEN_REUSE_ALLOWED,\n    auditLabel: \"password-reset-token-expiry-temporarily-extended-to-reduce-support-complaints-before-release-review\"\n  };\n}\n\nexport function shouldAcceptResetToken(token: PasswordResetToken, now: Date) {\n  return now <= token.expiresAt;\n}"
+                }
+            ]
         },
         {
             "id": "ev-support-ticket",

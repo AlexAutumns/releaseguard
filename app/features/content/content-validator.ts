@@ -1,6 +1,7 @@
 import type {
     ContentCatalog,
     EvidenceCardDefinition,
+    EvidenceAttachmentDefinition,
     ExpectedConfirmationDefinition,
     ExpectedFindingDefinition,
     FamilyReferenceDefinition,
@@ -137,6 +138,18 @@ function validateTicketInternalIds(
             contentId: ticket.id,
             message: `Duplicate evidence card ID "${duplicateEvidenceId}" found in ticket.`,
         });
+    }
+
+    for (const evidenceCard of ticket.evidenceCards) {
+        for (const duplicateAttachmentId of findDuplicateIds(
+            (evidenceCard.attachments ?? []) as EvidenceAttachmentDefinition[],
+        )) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: ticket.id,
+                message: `Duplicate attachment ID "${duplicateAttachmentId}" found in evidence card "${evidenceCard.id}".`,
+            });
+        }
     }
 
     for (const duplicateFindingId of findDuplicateIds(
