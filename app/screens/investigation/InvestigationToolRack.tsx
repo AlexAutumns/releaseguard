@@ -1,20 +1,35 @@
 import { Button } from "../../components/ui/Button";
 import { investigationToolCatalog } from "../../features/gameplay/tools/tool-catalog";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
+import type { GameplayRuleIssue } from "../../features/gameplay/shared/rule-result";
 import { cn } from "../../lib/cn";
 
 export interface InvestigationToolRackProps {
     activeTool: InvestigationToolId;
+    canReset: boolean;
+    canUndo: boolean;
+    lastIssue: GameplayRuleIssue | null;
+    onClearIssue: () => void;
+    onReset: () => void;
+    onSelectTool: (toolId: InvestigationToolId) => void;
+    onUndo: () => void;
 }
 
 /**
  * Bottom tool rack for the investigation workspace.
  *
- * Build 001D moves tool IDs into gameplay state. Build 001E will connect tool
- * selection to the attempt reducer.
+ * The rack now reflects real attempt state for active tool, undo availability,
+ * reset availability, and gameplay rule issues.
  */
 export function InvestigationToolRack({
     activeTool,
+    canReset,
+    canUndo,
+    lastIssue,
+    onClearIssue,
+    onReset,
+    onSelectTool,
+    onUndo,
 }: InvestigationToolRackProps) {
     return (
         <footer className="mt-2 shrink-0 rounded-2xl border border-rg-border bg-rg-surface/94 px-2.5 py-2 shadow-xl shadow-black/35">
@@ -33,6 +48,13 @@ export function InvestigationToolRack({
                                     )?.label
                                 }
                             </span>
+                        </p>
+                        <p className="mt-0.5 max-w-xs text-[0.7rem] leading-4 text-rg-faint">
+                            {
+                                investigationToolCatalog.find(
+                                    (tool) => tool.id === activeTool,
+                                )?.description
+                            }
                         </p>
                     </div>
                 </div>
@@ -54,10 +76,11 @@ export function InvestigationToolRack({
                                 )}
                                 disabled={!tool.isMvpEnabled}
                                 key={tool.id}
+                                onClick={() => onSelectTool(tool.id)}
                                 title={
                                     tool.isMvpEnabled
                                         ? tool.description
-                                        : `${tool.description} This tool will activate after gameplay state is connected.`
+                                        : `${tool.description} This tool will activate in a later build.`
                                 }
                                 type="button"
                             >
@@ -75,26 +98,44 @@ export function InvestigationToolRack({
 
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                     <Button
-                        disabled
                         className="h-9"
+                        disabled={!canUndo}
+                        onClick={onUndo}
                         size="sm"
-                        title="Undo is added with gameplay state wiring."
+                        title="Undo the last board or answer action."
                         variant="secondary"
                     >
                         ↶ Undo
                     </Button>
 
                     <Button
-                        disabled
                         className="h-9"
+                        disabled={!canReset}
+                        onClick={onReset}
                         size="sm"
-                        title="Reset is added with gameplay state wiring."
+                        title="Reset this ticket attempt."
                         variant="danger"
                     >
                         × Reset
                     </Button>
                 </div>
             </div>
+
+            {lastIssue && (
+                <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-rg-warning/40 bg-rg-warning/10 px-3 py-2">
+                    <p className="text-xs font-bold leading-5 text-rg-warning">
+                        {lastIssue.message}
+                    </p>
+
+                    <button
+                        className="shrink-0 font-mono text-xs font-bold uppercase tracking-[0.12em] text-rg-warning hover:text-rg-paper-strong"
+                        onClick={onClearIssue}
+                        type="button"
+                    >
+                        Clear
+                    </button>
+                </div>
+            )}
         </footer>
     );
 }

@@ -8,7 +8,9 @@ import type {
 export interface EvidencePreviewDialogProps {
     evidenceCard?: EvidenceCardDefinition;
     isOpen: boolean;
+    isPinned: boolean;
     onClose: () => void;
+    onPinToBoard: () => void;
 }
 
 /**
@@ -90,15 +92,15 @@ function EvidenceAttachmentView({
 /**
  * Evidence inspection popup for the investigation workspace.
  *
- * The evidence cabinet stays compact, while this dialog gives the player enough
- * room to read the full evidence file. Long code snippets scroll inside their
- * own code window instead of forcing the whole modal or page to scroll
- * horizontally.
+ * This modal reads authored evidence content and exposes the first real
+ * gameplay action: pinning evidence to the board.
  */
 export function EvidencePreviewDialog({
     evidenceCard,
     isOpen,
+    isPinned,
     onClose,
+    onPinToBoard,
 }: EvidencePreviewDialogProps) {
     useEffect(() => {
         if (!isOpen) {
@@ -213,7 +215,7 @@ export function EvidencePreviewDialog({
                                 </dt>
                                 <dd className="mt-2">
                                     <span className="rounded-md border border-rg-stamp/45 bg-rg-stamp/10 px-2.5 py-1 font-mono text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-rg-stamp">
-                                        Not pinned
+                                        {isPinned ? "Pinned" : "Not pinned"}
                                     </span>
                                 </dd>
                             </div>
@@ -268,12 +270,17 @@ export function EvidencePreviewDialog({
 
                         <div className="flex shrink-0 flex-wrap justify-end gap-2">
                             <button
-                                className="rounded-xl border border-rg-folder-dark/45 bg-rg-folder-dark/14 px-4 py-2 text-sm font-bold text-rg-folder-dark opacity-70"
-                                disabled
-                                title="Pinning will be enabled after gameplay state is added."
+                                className="rounded-xl border border-rg-folder-dark/45 bg-rg-folder-dark/14 px-4 py-2 text-sm font-bold text-rg-folder-dark disabled:opacity-60"
+                                disabled={isPinned}
+                                onClick={onPinToBoard}
+                                title={
+                                    isPinned
+                                        ? "This evidence is already pinned."
+                                        : "Pin this evidence to the board."
+                                }
                                 type="button"
                             >
-                                ◇ Pin to Board
+                                {isPinned ? "Pinned" : "◇ Pin to Board"}
                             </button>
 
                             <button

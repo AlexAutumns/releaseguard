@@ -11,12 +11,14 @@ import type {
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
+import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
+import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
 import { InvestigationHud } from "./InvestigationHud";
 import { InvestigationRail } from "./InvestigationRail";
 import { InvestigationToolRack } from "./InvestigationToolRack";
 import { InvestigationWorkspaceShell } from "./InvestigationWorkspaceShell";
-import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
-import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
+import { useInvestigationController } from "./useInvestigationController";
+import { cn } from "../../lib/cn";
 
 export interface InvestigationScreenProps {
     requestedShiftId: string;
@@ -30,9 +32,8 @@ export interface InvestigationScreenProps {
 /**
  * Active investigation workspace for one ticket.
  *
- * This screen owns workspace layout state such as folded side panels. Gameplay
- * state will be added later through a reducer so layout concerns and gameplay
- * rules stay separated.
+ * This wrapper handles missing content safely. The real workspace is split into
+ * a child component so hooks only run when shift and ticket content exist.
  */
 export function InvestigationScreen({
     requestedShiftId,
@@ -40,17 +41,6 @@ export function InvestigationScreen({
     shift,
     ticket,
 }: InvestigationScreenProps) {
-    const [isCabinetOpen, setIsCabinetOpen] = useState(true);
-    const [isCaseworkOpen, setIsCaseworkOpen] = useState(true);
-    const [activeTool] = useState<InvestigationToolId>("select");
-    const [previewEvidenceId, setPreviewEvidenceId] = useState<string | null>(
-        null,
-    );
-
-    const previewEvidenceCard = ticket?.evidenceCards.find(
-        (evidenceCard) => evidenceCard.id === previewEvidenceId,
-    );
-
     if (!shift || !ticket) {
         return (
             <InvestigationWorkspaceShell>
@@ -76,6 +66,39 @@ export function InvestigationScreen({
             </InvestigationWorkspaceShell>
         );
     }
+
+    return <InvestigationWorkspace shift={shift} ticket={ticket} />;
+}
+
+interface InvestigationWorkspaceProps {
+    shift: ShiftDefinition;
+    ticket: ReleaseTicketDefinition;
+}
+
+/**
+ * Real investigation workspace for a valid ticket.
+ *
+ * Layout state stays local here. Gameplay state is delegated to the
+ * investigation controller and reducer.
+ */
+function InvestigationWorkspace({
+    shift,
+    ticket,
+}: InvestigationWorkspaceProps) {
+    const [isCabinetOpen, setIsCabinetOpen] = useState(true);
+    const [isCaseworkOpen, setIsCaseworkOpen] = useState(true);
+
+    const controller = useInvestigationController({ shift, ticket });
+
+    const activeTool = controller.attempt.present.activeTool;
+
+    const previewIsPinned = controller.previewEvidenceCard
+        ? controller.evidenceItems.some(
+              (item) =>
+                  item.evidenceCard.id === controller.previewEvidenceCard?.id &&
+                  item.isPinned,
+          )
+        : false;
 
     return (
         <InvestigationWorkspaceShell>
@@ -125,11 +148,52 @@ export function InvestigationScreen({
 
                             <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                                 <div className="grid gap-2 pb-2">
-                                    {ticket.evidenceCards.map(
-                                        (evidenceCard, index) => (
+                                    {controller.evidenceItems.map(
+                                        (
+                                            {
+                                                evidenceCard,
+                                                isInspected,
+                                                isPinned,
+                                            },
+                                            index,
+                                        ) => (
                                             <article
-                                                className="min-w-0 rounded-2xl border border-rg-border-soft bg-rg-surface/78 p-3 shadow-lg shadow-black/20 transition hover:border-rg-amber/60"
+                                                className={cn(
+                                                    "min-w-0 rounded-2xl border border-rg-border-soft bg-rg-surface/78 p-3 shadow-lg shadow-black/20 transition hover:border-rg-amber/60",
+                                                    activeTool === "select"
+                                                        ? "cursor-default"
+                                                        : "cursor-pointer hover:bg-rg-surface-raised",
+                                                )}
                                                 key={evidenceCard.id}
+                                                onClick={() =>
+                                                    controller.activateCabinetEvidence(
+                                                        evidenceCard.id,
+                                                    )
+                                                }
+                                                onKeyDown={(event) => {
+                                                    if (
+                                                        event.key === "Enter" ||
+                                                        event.key === " "
+                                                    ) {
+                                                        event.preventDefault();
+                                                        controller.activateCabinetEvidence(
+                                                            evidenceCard.id,
+                                                        );
+                                                    }
+                                                }}
+                                                role="button"
+                                                tabIndex={0}
+                                                title={
+                                                    activeTool === "inspect"
+                                                        ? "Inspect this evidence file."
+                                                        : activeTool === "pin"
+                                                          ? isPinned
+                                                              ? "This evidence is already pinned."
+                                                              : isInspected
+                                                                ? "Pin this evidence to the board."
+                                                                : "Inspect this evidence before pinning it."
+                                                          : "Use Inspect or Pin to act on this cabinet file."
+                                                }
                                             >
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
@@ -143,8 +207,20 @@ export function InvestigationScreen({
                                                         </p>
                                                     </div>
 
-                                                    <Badge tone="neutral">
-                                                        #{index + 1}
+                                                    <Badge
+                                                        tone={
+                                                            isPinned
+                                                                ? "success"
+                                                                : isInspected
+                                                                  ? "warning"
+                                                                  : "neutral"
+                                                        }
+                                                    >
+                                                        {isPinned
+                                                            ? "pinned"
+                                                            : isInspected
+                                                              ? "seen"
+                                                              : `#${index + 1}`}
                                                     </Badge>
                                                 </div>
 
@@ -155,25 +231,44 @@ export function InvestigationScreen({
                                                 <div className="mt-3 flex flex-wrap gap-1.5">
                                                     <Button
                                                         className="h-8"
-                                                        onClick={() =>
-                                                            setPreviewEvidenceId(
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            controller.openEvidencePreview(
                                                                 evidenceCard.id,
-                                                            )
-                                                        }
+                                                            );
+                                                        }}
                                                         size="sm"
                                                         title="Inspect evidence file"
                                                         variant="secondary"
                                                     >
                                                         ⌕ Inspect
                                                     </Button>
+
                                                     <Button
-                                                        disabled
                                                         className="h-8"
+                                                        disabled={
+                                                            !isInspected ||
+                                                            isPinned
+                                                        }
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            controller.pinEvidence(
+                                                                evidenceCard.id,
+                                                            );
+                                                        }}
                                                         size="sm"
-                                                        title="Pinning is added with gameplay state."
+                                                        title={
+                                                            isPinned
+                                                                ? "This evidence is already pinned."
+                                                                : isInspected
+                                                                  ? "Pin this evidence to the board."
+                                                                  : "Inspect this evidence before pinning it."
+                                                        }
                                                         variant="ghost"
                                                     >
-                                                        ◇ Pin
+                                                        {isPinned
+                                                            ? "Pinned"
+                                                            : "◇ Pin"}
                                                     </Button>
                                                 </div>
                                             </article>
@@ -210,8 +305,21 @@ export function InvestigationScreen({
                             </div>
 
                             <div className="flex shrink-0 flex-wrap gap-1.5">
-                                <Badge tone="neutral">0 pinned</Badge>
-                                <Badge tone="neutral">0 links</Badge>
+                                <Badge tone="warning">{activeTool}</Badge>
+                                <Badge tone="neutral">
+                                    {
+                                        controller.attempt.present.board
+                                            .pinnedEvidence.length
+                                    }{" "}
+                                    pinned
+                                </Badge>
+                                <Badge tone="neutral">
+                                    {
+                                        controller.attempt.present.board
+                                            .connections.length
+                                    }{" "}
+                                    links
+                                </Badge>
                             </div>
                         </div>
 
@@ -221,18 +329,67 @@ export function InvestigationScreen({
                             </div>
 
                             <div className="relative z-10 h-full min-h-[420px] p-2">
-                                <div className="grid h-full place-items-center rounded-2xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20">
-                                    <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
-                                        <p className="text-base font-black text-rg-paper-strong">
-                                            Board is clear
-                                        </p>
-                                        <p className="mt-2 text-xs leading-5 text-rg-paper-strong/75">
-                                            Inspect evidence from the cabinet,
-                                            then pin selected clues here. Fold
-                                            side panels to gain more board
-                                            space.
-                                        </p>
-                                    </div>
+                                <div
+                                    className="relative h-full overflow-hidden rounded-2xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20"
+                                    onClick={() =>
+                                        controller.selectPinnedEvidence(null)
+                                    }
+                                >
+                                    {controller.pinnedBoardItems.length ===
+                                    0 ? (
+                                        <div className="grid h-full place-items-center">
+                                            <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
+                                                <p className="text-base font-black text-rg-paper-strong">
+                                                    Board is clear
+                                                </p>
+                                                <p className="mt-2 text-xs leading-5 text-rg-paper-strong/75">
+                                                    Inspect evidence from the
+                                                    cabinet, then pin selected
+                                                    clues here. Fold side panels
+                                                    to gain more board space.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        controller.pinnedBoardItems.map(
+                                            (item) => (
+                                                <BoardPinnedEvidenceCard
+                                                    activeTool={activeTool}
+                                                    evidenceCard={
+                                                        item.evidenceCard
+                                                    }
+                                                    isSelected={item.isSelected}
+                                                    key={
+                                                        item.pinnedEvidence
+                                                            .pinnedEvidenceId
+                                                    }
+                                                    onActivate={() =>
+                                                        controller.activatePinnedBoardEvidence(
+                                                            item.pinnedEvidence
+                                                                .pinnedEvidenceId,
+                                                            item.evidenceCard
+                                                                .id,
+                                                        )
+                                                    }
+                                                    onInspect={() =>
+                                                        controller.openEvidencePreview(
+                                                            item.evidenceCard
+                                                                .id,
+                                                        )
+                                                    }
+                                                    onUnpin={() =>
+                                                        controller.unpinEvidence(
+                                                            item.pinnedEvidence
+                                                                .pinnedEvidenceId,
+                                                        )
+                                                    }
+                                                    pinnedEvidence={
+                                                        item.pinnedEvidence
+                                                    }
+                                                />
+                                            ),
+                                        )
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -253,7 +410,12 @@ export function InvestigationScreen({
                                                 Findings
                                             </h2>
                                             <Badge tone="neutral">
-                                                0 filed
+                                                {
+                                                    controller.attempt.present
+                                                        .findings.filedFindings
+                                                        .length
+                                                }{" "}
+                                                filed
                                             </Badge>
                                         </div>
                                     </div>
@@ -291,7 +453,10 @@ export function InvestigationScreen({
                                     </h2>
                                 </div>
 
-                                <Badge tone="danger">Unstamped</Badge>
+                                <Badge tone="danger">
+                                    {controller.attempt.present.verdict
+                                        .selectedVerdict ?? "Unstamped"}
+                                </Badge>
                             </div>
 
                             <p className="text-xs leading-5 text-rg-muted">
@@ -339,19 +504,37 @@ export function InvestigationScreen({
                     <InvestigationRail
                         icon="▥"
                         label="Casework"
-                        meta={<Badge tone="warning">0</Badge>}
+                        meta={
+                            <Badge tone="warning">
+                                {
+                                    controller.attempt.present.findings
+                                        .filedFindings.length
+                                }
+                            </Badge>
+                        }
                         onOpen={() => setIsCaseworkOpen(true)}
                         side="right"
                     />
                 )}
             </div>
 
-            <InvestigationToolRack activeTool={activeTool} />
+            <InvestigationToolRack
+                activeTool={controller.attempt.present.activeTool}
+                canReset={controller.canReset}
+                canUndo={controller.canUndo}
+                lastIssue={controller.attempt.lastIssue}
+                onClearIssue={controller.clearLastIssue}
+                onReset={controller.resetAttempt}
+                onSelectTool={controller.setActiveTool}
+                onUndo={controller.undoLastAction}
+            />
 
             <EvidencePreviewDialog
-                evidenceCard={previewEvidenceCard}
-                isOpen={Boolean(previewEvidenceCard)}
-                onClose={() => setPreviewEvidenceId(null)}
+                evidenceCard={controller.previewEvidenceCard}
+                isOpen={Boolean(controller.previewEvidenceCard)}
+                isPinned={previewIsPinned}
+                onClose={controller.closeEvidencePreview}
+                onPinToBoard={controller.pinPreviewEvidence}
             />
         </InvestigationWorkspaceShell>
     );

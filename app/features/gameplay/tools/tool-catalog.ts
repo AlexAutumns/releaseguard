@@ -6,30 +6,32 @@ import type {
 /**
  * Ordered catalog of tools shown in the investigation tool rack.
  *
- * Tools that are not enabled yet are still listed so the UI can communicate the
- * intended gameplay model without pretending every action is ready.
+ * Tool metadata lives here so the UI can render from one source of truth instead
+ * of hard-coding toolbar buttons in the screen.
  */
 export const investigationToolCatalog: InvestigationToolDefinition[] = [
     {
         id: "select",
         icon: "⌖",
         label: "Select",
-        description: "Select pinned evidence or board items.",
+        description: "Click pinned board cards to select them.",
         isMvpEnabled: true,
     },
     {
         id: "inspect",
         icon: "⌕",
         label: "Inspect",
-        description: "Inspect an evidence file before pinning it.",
-        isMvpEnabled: false,
+        description:
+            "Click evidence files or pinned cards to open the inspection modal.",
+        isMvpEnabled: true,
     },
     {
         id: "pin",
         icon: "◇",
         label: "Pin",
-        description: "Pin evidence onto the board.",
-        isMvpEnabled: false,
+        description:
+            "Click inspected cabinet files to pin them. Uninspected files open inspection first.",
+        isMvpEnabled: true,
     },
     {
         id: "connect",
