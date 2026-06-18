@@ -18,6 +18,7 @@ import { InvestigationRail } from "./InvestigationRail";
 import { InvestigationToolRack } from "./InvestigationToolRack";
 import { InvestigationWorkspaceShell } from "./InvestigationWorkspaceShell";
 import { useInvestigationController } from "./useInvestigationController";
+import { GameNotificationStack } from "../../components/game-notifications/GameNotificationStack";
 import { cn } from "../../lib/cn";
 
 export interface InvestigationScreenProps {
@@ -103,6 +104,12 @@ function InvestigationWorkspace({
     return (
         <InvestigationWorkspaceShell>
             <InvestigationHud shift={shift} ticket={ticket} />
+
+            <GameNotificationStack
+                notifications={controller.notifications}
+                onDismiss={controller.dismissNotification}
+                position="top-center"
+            />
 
             <div
                 className="grid min-h-0 flex-1 gap-2"
@@ -522,8 +529,6 @@ function InvestigationWorkspace({
                 activeTool={controller.attempt.present.activeTool}
                 canReset={controller.canReset}
                 canUndo={controller.canUndo}
-                lastIssue={controller.attempt.lastIssue}
-                onClearIssue={controller.clearLastIssue}
                 onReset={controller.resetAttempt}
                 onSelectTool={controller.setActiveTool}
                 onUndo={controller.undoLastAction}

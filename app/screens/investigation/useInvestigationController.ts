@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import type {
     EvidenceCardDefinition,
@@ -10,6 +10,7 @@ import { ticketAttemptReducer } from "../../features/gameplay/attempt/attempt-re
 import type { TicketAttemptState } from "../../features/gameplay/attempt/attempt-state";
 import type { PinnedEvidence } from "../../features/gameplay/board/board-state";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
+import { useGameNotifications } from "../../features/game-notifications/use-game-notifications";
 
 export interface UseInvestigationControllerInput {
     shift: ShiftDefinition;
@@ -61,7 +62,13 @@ export interface InvestigationController {
     setActiveTool: (toolId: InvestigationToolId) => void;
     undoLastAction: () => void;
     resetAttempt: () => void;
-    clearLastIssue: () => void;
+    // clearLastIssue: () => void;
+
+    // Notifications
+    notifications: ReturnType<typeof useGameNotifications>["notifications"];
+    dismissNotification: ReturnType<
+        typeof useGameNotifications
+    >["dismissNotification"];
 }
 
 /**
@@ -89,6 +96,9 @@ export function useInvestigationController({
                 evidenceIds,
             }),
     );
+
+    const { notifications, pushNotification, dismissNotification } =
+        useGameNotifications();
 
     const [previewEvidenceId, setPreviewEvidenceId] = useState<string | null>(
         null,
@@ -162,6 +172,29 @@ export function useInvestigationController({
         attempt.present.board.connections.length > 0 ||
         attempt.present.findings.filedFindings.length > 0 ||
         attempt.present.verdict.selectedVerdict !== null;
+
+    useEffect(() => {
+        if (!attempt.lastIssue) {
+            return;
+        }
+
+        pushNotification({
+            fingerprint: `rule-issue:${attempt.lastIssue.code}`,
+            title:
+                attempt.lastIssue.severity === "error"
+                    ? "Action blocked"
+                    : "Action notice",
+            message: attempt.lastIssue.message,
+            tone:
+                attempt.lastIssue.severity === "error"
+                    ? "danger"
+                    : attempt.lastIssue.severity,
+        });
+
+        dispatch({
+            type: "CLEAR_LAST_ISSUE",
+        });
+    }, [attempt.lastIssue, pushNotification]);
 
     const openEvidencePreview = useCallback((evidenceId: string) => {
         dispatch({
@@ -301,12 +334,6 @@ export function useInvestigationController({
         setPreviewEvidenceId(null);
     }, []);
 
-    const clearLastIssue = useCallback(() => {
-        dispatch({
-            type: "CLEAR_LAST_ISSUE",
-        });
-    }, []);
-
     return {
         attempt,
         evidenceItems,
@@ -325,6 +352,7 @@ export function useInvestigationController({
         setActiveTool,
         undoLastAction,
         resetAttempt,
-        clearLastIssue,
+        notifications,
+        dismissNotification,
     };
 }

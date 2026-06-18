@@ -1,15 +1,12 @@
 import { Button } from "../../components/ui/Button";
 import { investigationToolCatalog } from "../../features/gameplay/tools/tool-catalog";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
-import type { GameplayRuleIssue } from "../../features/gameplay/shared/rule-result";
 import { cn } from "../../lib/cn";
 
 export interface InvestigationToolRackProps {
     activeTool: InvestigationToolId;
     canReset: boolean;
     canUndo: boolean;
-    lastIssue: GameplayRuleIssue | null;
-    onClearIssue: () => void;
     onReset: () => void;
     onSelectTool: (toolId: InvestigationToolId) => void;
     onUndo: () => void;
@@ -18,19 +15,21 @@ export interface InvestigationToolRackProps {
 /**
  * Bottom tool rack for the investigation workspace.
  *
- * The rack now reflects real attempt state for active tool, undo availability,
- * reset availability, and gameplay rule issues.
+ * The rack controls the active investigation tool and attempt-level actions.
+ * Temporary warnings are shown in the game notification stack instead of here.
  */
 export function InvestigationToolRack({
     activeTool,
     canReset,
     canUndo,
-    lastIssue,
-    onClearIssue,
     onReset,
     onSelectTool,
     onUndo,
 }: InvestigationToolRackProps) {
+    const activeToolDefinition = investigationToolCatalog.find(
+        (tool) => tool.id === activeTool,
+    );
+
     return (
         <footer className="mt-2 shrink-0 rounded-2xl border border-rg-border bg-rg-surface/94 px-2.5 py-2 shadow-xl shadow-black/35">
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
@@ -39,22 +38,16 @@ export function InvestigationToolRack({
                         <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
                             Tool Rack
                         </p>
+
                         <p className="text-xs text-rg-muted">
                             Active:{" "}
                             <span className="font-bold text-rg-text">
-                                {
-                                    investigationToolCatalog.find(
-                                        (tool) => tool.id === activeTool,
-                                    )?.label
-                                }
+                                {activeToolDefinition?.label}
                             </span>
                         </p>
+
                         <p className="mt-0.5 max-w-xs text-[0.7rem] leading-4 text-rg-faint">
-                            {
-                                investigationToolCatalog.find(
-                                    (tool) => tool.id === activeTool,
-                                )?.description
-                            }
+                            {activeToolDefinition?.description}
                         </p>
                     </div>
                 </div>
@@ -120,22 +113,6 @@ export function InvestigationToolRack({
                     </Button>
                 </div>
             </div>
-
-            {lastIssue && (
-                <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-rg-warning/40 bg-rg-warning/10 px-3 py-2">
-                    <p className="text-xs font-bold leading-5 text-rg-warning">
-                        {lastIssue.message}
-                    </p>
-
-                    <button
-                        className="shrink-0 font-mono text-xs font-bold uppercase tracking-[0.12em] text-rg-warning hover:text-rg-paper-strong"
-                        onClick={onClearIssue}
-                        type="button"
-                    >
-                        Clear
-                    </button>
-                </div>
-            )}
         </footer>
     );
 }

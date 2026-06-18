@@ -370,3 +370,41 @@ button:disabled {
 .rg-code-scrollbar::-webkit-scrollbar-corner {
     background: rgb(23 18 15 / 82%);
 }
+
+/**
+ * Game notification animations.
+ *
+ * Notifications should feel present but not aggressive. They fade/slide in and
+ * fade out quickly so short gameplay warnings do not clog the HUD.
+ */
+@keyframes rg-notification-in {
+    from {
+        opacity: 0;
+        transform: translateY(-0.35rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes rg-notification-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-0.25rem) scale(0.98);
+    }
+}
+
+.rg-notification-enter {
+    animation: rg-notification-in 160ms ease-out both;
+}
+
+.rg-notification-leave {
+    animation: rg-notification-out 180ms ease-in both;
+}
