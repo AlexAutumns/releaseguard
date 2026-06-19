@@ -67,6 +67,7 @@ export function createTicketAttemptState({
         present: createInitialAttemptPresentState(),
         history: {
             past: [],
+            future: [],
             limit: DEFAULT_HISTORY_LIMIT,
         },
         lastIssue: null,

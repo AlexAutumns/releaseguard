@@ -5,8 +5,10 @@ import { cn } from "../../lib/cn";
 
 export interface InvestigationToolRackProps {
     activeTool: InvestigationToolId;
+    canRedo: boolean;
     canReset: boolean;
     canUndo: boolean;
+    onRedo: () => void;
     onReset: () => void;
     onSelectTool: (toolId: InvestigationToolId) => void;
     onUndo: () => void;
@@ -20,8 +22,10 @@ export interface InvestigationToolRackProps {
  */
 export function InvestigationToolRack({
     activeTool,
+    canRedo,
     canReset,
     canUndo,
+    onRedo,
     onReset,
     onSelectTool,
     onUndo,
@@ -95,10 +99,21 @@ export function InvestigationToolRack({
                         disabled={!canUndo}
                         onClick={onUndo}
                         size="sm"
-                        title="Undo the last board or answer action."
+                        title="Undo the last board action."
                         variant="secondary"
                     >
                         ↶ Undo
+                    </Button>
+
+                    <Button
+                        className="h-9"
+                        disabled={!canRedo}
+                        onClick={onRedo}
+                        size="sm"
+                        title="Redo the most recently undone board action."
+                        variant="secondary"
+                    >
+                        ↷ Redo
                     </Button>
 
                     <Button

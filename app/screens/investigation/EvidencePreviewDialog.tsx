@@ -168,58 +168,62 @@ export function EvidencePreviewDialog({
                     </div>
                 </header>
 
-                <div className="relative z-10 grid min-h-0 min-w-0 overflow-hidden lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-                    <aside className="min-h-0 min-w-0 border-b border-rg-folder-dark/25 bg-rg-folder/12 px-4 py-3 sm:px-6 lg:border-b-0 lg:border-r lg:py-4">
-                        <p className="font-mono text-[0.66rem] font-extrabold uppercase tracking-[0.22em] text-rg-folder-dark">
-                            File Details
-                        </p>
+                <div className="relative z-10 grid min-h-0 min-w-0 overflow-hidden lg:grid-cols-[minmax(0,290px)_minmax(0,1fr)]">
+                    <aside className="min-h-0 min-w-0 border-b border-rg-folder-dark/25 bg-rg-paper-strong/22 px-4 py-3 sm:px-6 lg:border-b-0 lg:border-r lg:py-4">
+                        <div className="rounded-2xl border border-rg-folder-dark/25 bg-rg-paper/40 p-4 shadow-inner shadow-rg-paper-ink/5">
+                            <p className="font-mono text-[0.66rem] font-extrabold uppercase tracking-[0.22em] text-rg-folder-dark">
+                                Dossier Details
+                            </p>
 
-                        <dl className="mt-4 grid gap-4 text-sm">
-                            <div className="min-w-0">
-                                <dt className="font-mono text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
-                                    Evidence Type
-                                </dt>
-                                <dd className="mt-1 break-words font-bold text-rg-paper-ink">
-                                    {evidenceCard.type}
-                                </dd>
-                            </div>
+                            <dl className="mt-4 grid gap-3 text-sm">
+                                <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
+                                    <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
+                                        Evidence Type
+                                    </dt>
+                                    <dd className="mt-1 break-words text-sm font-black leading-5 text-rg-paper-ink">
+                                        {evidenceCard.type}
+                                    </dd>
+                                </div>
 
-                            <div className="min-w-0">
-                                <dt className="font-mono text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
-                                    Risk Hints
-                                </dt>
-                                <dd className="mt-2 flex flex-wrap gap-2">
-                                    {evidenceCard.riskHints.map((riskHint) => (
-                                        <span
-                                            className="rounded-md border border-rg-folder-dark/45 bg-rg-folder-dark/16 px-2.5 py-1 font-mono text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-rg-folder-dark"
-                                            key={riskHint}
-                                        >
-                                            {riskHint}
+                                <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
+                                    <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
+                                        Risk Hints
+                                    </dt>
+                                    <dd className="mt-2 flex flex-wrap gap-2">
+                                        {evidenceCard.riskHints.map(
+                                            (riskHint) => (
+                                                <span
+                                                    className="rounded-md border border-rg-folder-dark/45 bg-rg-folder-dark/16 px-2.5 py-1 font-mono text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-rg-folder-dark"
+                                                    key={riskHint}
+                                                >
+                                                    {riskHint}
+                                                </span>
+                                            ),
+                                        )}
+                                    </dd>
+                                </div>
+
+                                <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
+                                    <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
+                                        Attachments
+                                    </dt>
+                                    <dd className="mt-1 text-lg font-black leading-6 text-rg-paper-ink">
+                                        {attachments.length}
+                                    </dd>
+                                </div>
+
+                                <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
+                                    <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
+                                        Board Status
+                                    </dt>
+                                    <dd className="mt-2">
+                                        <span className="inline-flex rounded-md border border-rg-stamp/45 bg-rg-stamp/10 px-2 py-1 font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-rg-stamp">
+                                            {isPinned ? "Pinned" : "Not pinned"}
                                         </span>
-                                    ))}
-                                </dd>
-                            </div>
-
-                            <div className="min-w-0">
-                                <dt className="font-mono text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
-                                    Attachments
-                                </dt>
-                                <dd className="mt-1 font-bold text-rg-paper-ink">
-                                    {attachments.length}
-                                </dd>
-                            </div>
-
-                            <div className="min-w-0">
-                                <dt className="font-mono text-[0.65rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
-                                    Current Status
-                                </dt>
-                                <dd className="mt-2">
-                                    <span className="rounded-md border border-rg-stamp/45 bg-rg-stamp/10 px-2.5 py-1 font-mono text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-rg-stamp">
-                                        {isPinned ? "Pinned" : "Not pinned"}
-                                    </span>
-                                </dd>
-                            </div>
-                        </dl>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
                     </aside>
 
                     <main className="rg-scrollbar min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 lg:px-7 lg:py-5">

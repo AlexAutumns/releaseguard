@@ -47,6 +47,7 @@ export interface InvestigationController {
     pinnedBoardItems: BoardPinnedEvidenceItem[];
     previewEvidenceCard?: EvidenceCardDefinition;
     canUndo: boolean;
+    canRedo: boolean;
     canReset: boolean;
     activateCabinetEvidence: (evidenceId: string) => void;
     activatePinnedBoardEvidence: (
@@ -61,6 +62,7 @@ export interface InvestigationController {
     selectPinnedEvidence: (pinnedEvidenceId: string | null) => void;
     setActiveTool: (toolId: InvestigationToolId) => void;
     undoLastAction: () => void;
+    redoLastAction: () => void;
     resetAttempt: () => void;
     // clearLastIssue: () => void;
 
@@ -164,9 +166,11 @@ export function useInvestigationController({
         : undefined;
 
     const canUndo = attempt.history.past.length > 0;
+    const canRedo = attempt.history.future.length > 0;
 
     const canReset =
         canUndo ||
+        canRedo ||
         attempt.present.evidence.inspectedEvidenceIds.length > 0 ||
         attempt.present.board.pinnedEvidence.length > 0 ||
         attempt.present.board.connections.length > 0 ||
@@ -327,6 +331,12 @@ export function useInvestigationController({
         });
     }, []);
 
+    const redoLastAction = useCallback(() => {
+        dispatch({
+            type: "REDO_LAST_ACTION",
+        });
+    }, []);
+
     const resetAttempt = useCallback(() => {
         dispatch({
             type: "RESET_ATTEMPT",
@@ -340,7 +350,9 @@ export function useInvestigationController({
         pinnedBoardItems,
         previewEvidenceCard,
         canUndo,
+        canRedo,
         canReset,
+        notifications,
         activateCabinetEvidence,
         activatePinnedBoardEvidence,
         openEvidencePreview,
@@ -351,8 +363,8 @@ export function useInvestigationController({
         selectPinnedEvidence,
         setActiveTool,
         undoLastAction,
+        redoLastAction,
         resetAttempt,
-        notifications,
         dismissNotification,
     };
 }

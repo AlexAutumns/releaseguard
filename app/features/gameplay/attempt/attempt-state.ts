@@ -34,10 +34,15 @@ export interface AttemptPresentState {
 }
 
 /**
- * Undo history for a ticket attempt.
+ * Board-only undo/redo history for a ticket attempt.
+ *
+ * Undo and redo intentionally affect the investigation board only. Reset is the
+ * full workspace cleanup action and clears evidence inspection, board state,
+ * findings, verdict state, and all history.
  */
 export interface AttemptHistoryState {
-    past: AttemptPresentState[];
+    past: BoardState[];
+    future: BoardState[];
     limit: number;
 }
 

@@ -527,8 +527,10 @@ function InvestigationWorkspace({
 
             <InvestigationToolRack
                 activeTool={controller.attempt.present.activeTool}
+                canRedo={controller.canRedo}
                 canReset={controller.canReset}
                 canUndo={controller.canUndo}
+                onRedo={controller.redoLastAction}
                 onReset={controller.resetAttempt}
                 onSelectTool={controller.setActiveTool}
                 onUndo={controller.undoLastAction}

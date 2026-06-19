@@ -408,3 +408,14 @@ button:disabled {
 .rg-notification-leave {
     animation: rg-notification-out 180ms ease-in both;
 }
+
+/**
+ * Notebook input font utility.
+ *
+ * This uses common system handwriting-style fonts with readable fallbacks. It is
+ * only intended for player-written notebook fields, not core UI labels.
+ */
+.rg-handwriting-input {
+    font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+    letter-spacing: 0.01em;
+}

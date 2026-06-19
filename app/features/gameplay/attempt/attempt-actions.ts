@@ -77,6 +77,9 @@ export type TicketAttemptAction =
           type: "UNDO_LAST_ACTION";
       }
     | {
+          type: "REDO_LAST_ACTION";
+      }
+    | {
           type: "RESET_ATTEMPT";
       }
     | {

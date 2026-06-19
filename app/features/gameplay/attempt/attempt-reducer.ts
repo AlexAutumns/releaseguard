@@ -6,6 +6,7 @@ import {
     selectPinnedEvidence,
     unpinEvidenceFromBoard,
 } from "../board/board-rules";
+import type { BoardState } from "../board/board-state";
 import { markEvidenceInspected } from "../evidence/evidence-rules";
 import {
     attachEvidenceToDraft,
@@ -16,9 +17,13 @@ import {
 } from "../findings/finding-rules";
 import type { GameplayRuleIssue, RuleResult } from "../shared/rule-result";
 import { createInitialAttemptPresentState } from "./attempt-factory";
-import { recordUndoSnapshot, undoLastAttemptAction } from "./attempt-history";
+import {
+    recordBoardUndoSnapshot,
+    redoLastBoardAction,
+    undoLastBoardAction,
+} from "./attempt-history";
 import type { TicketAttemptAction } from "./attempt-actions";
-import type { AttemptPresentState, TicketAttemptState } from "./attempt-state";
+import type { TicketAttemptState } from "./attempt-state";
 
 /**
  * Returns the same attempt state with a new gameplay issue.
@@ -34,61 +39,47 @@ function withIssue(
 }
 
 /**
- * Applies a non-undoable rule result to the attempt present state.
- */
-function applyRuleResult(
-    state: TicketAttemptState,
-    result: RuleResult<AttemptPresentState>,
-): TicketAttemptState {
-    if (!result.ok) {
-        return withIssue(state, result.issue);
-    }
-
-    return {
-        ...state,
-        present: result.value,
-        lastIssue: null,
-    };
-}
-
-/**
- * Applies an undoable present-state update.
+ * Records the previous board state and commits a new board state.
  *
- * Undoable actions record the previous present state before replacing it.
+ * Undo/redo is board-only by design. Notebook, verdict, and inspection progress
+ * are not part of board undo history.
  */
-function commitUndoablePresent(
+function commitBoardChange(
     state: TicketAttemptState,
-    present: AttemptPresentState,
+    board: BoardState,
 ): TicketAttemptState {
-    const stateWithHistory = recordUndoSnapshot(state);
+    const stateWithHistory = recordBoardUndoSnapshot(state);
 
     return {
         ...stateWithHistory,
-        present,
+        present: {
+            ...stateWithHistory.present,
+            board,
+        },
         lastIssue: null,
     };
 }
 
 /**
- * Applies an undoable rule result to the attempt present state.
+ * Applies an undoable board rule result.
  */
-function applyUndoableRuleResult(
+function applyBoardRuleResult(
     state: TicketAttemptState,
-    result: RuleResult<AttemptPresentState>,
+    result: RuleResult<BoardState>,
 ): TicketAttemptState {
     if (!result.ok) {
         return withIssue(state, result.issue);
     }
 
-    return commitUndoablePresent(state, result.value);
+    return commitBoardChange(state, result.value);
 }
 
 /**
  * Reducer for one ticket attempt.
  *
- * The reducer coordinates domain rules and history. Board, evidence, finding,
- * and verdict logic should stay in their own domain files instead of being
- * dumped directly into this reducer.
+ * The reducer coordinates domain rules and history. Board undo/redo is isolated
+ * to board state so future notebook and verdict interactions do not get
+ * accidentally rolled back by board controls.
  */
 export function ticketAttemptReducer(
     state: TicketAttemptState,
@@ -126,13 +117,14 @@ export function ticketAttemptReducer(
                 return withIssue(state, result.issue);
             }
 
-            return applyRuleResult(state, {
-                ok: true,
-                value: {
+            return {
+                ...state,
+                present: {
                     ...state.present,
                     evidence: result.value,
                 },
-            });
+                lastIssue: null,
+            };
         }
 
         case "PIN_EVIDENCE": {
@@ -143,17 +135,7 @@ export function ticketAttemptReducer(
                 action.nowIso,
             );
 
-            if (!result.ok) {
-                return withIssue(state, result.issue);
-            }
-
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
-                    ...state.present,
-                    board: result.value,
-                },
-            });
+            return applyBoardRuleResult(state, result);
         }
 
         case "UNPIN_EVIDENCE": {
@@ -162,17 +144,7 @@ export function ticketAttemptReducer(
                 action.pinnedEvidenceId,
             );
 
-            if (!result.ok) {
-                return withIssue(state, result.issue);
-            }
-
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
-                    ...state.present,
-                    board: result.value,
-                },
-            });
+            return applyBoardRuleResult(state, result);
         }
 
         case "MOVE_PINNED_EVIDENCE": {
@@ -182,17 +154,7 @@ export function ticketAttemptReducer(
                 action.position,
             );
 
-            if (!result.ok) {
-                return withIssue(state, result.issue);
-            }
-
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
-                    ...state.present,
-                    board: result.value,
-                },
-            });
+            return applyBoardRuleResult(state, result);
         }
 
         case "SELECT_PINNED_EVIDENCE": {
@@ -205,13 +167,14 @@ export function ticketAttemptReducer(
                 return withIssue(state, result.issue);
             }
 
-            return applyRuleResult(state, {
-                ok: true,
-                value: {
+            return {
+                ...state,
+                present: {
                     ...state.present,
                     board: result.value,
                 },
-            });
+                lastIssue: null,
+            };
         }
 
         case "CONNECT_PINNED_EVIDENCE": {
@@ -222,17 +185,7 @@ export function ticketAttemptReducer(
                 action.nowIso,
             );
 
-            if (!result.ok) {
-                return withIssue(state, result.issue);
-            }
-
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
-                    ...state.present,
-                    board: result.value,
-                },
-            });
+            return applyBoardRuleResult(state, result);
         }
 
         case "DISCONNECT_CONNECTION": {
@@ -241,17 +194,7 @@ export function ticketAttemptReducer(
                 action.connectionId,
             );
 
-            if (!result.ok) {
-                return withIssue(state, result.issue);
-            }
-
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
-                    ...state.present,
-                    board: result.value,
-                },
-            });
+            return applyBoardRuleResult(state, result);
         }
 
         case "UPDATE_DRAFT_FINDING":
@@ -278,13 +221,14 @@ export function ticketAttemptReducer(
                 return withIssue(state, result.issue);
             }
 
-            return applyRuleResult(state, {
-                ok: true,
-                value: {
+            return {
+                ...state,
+                present: {
                     ...state.present,
                     findings: result.value,
                 },
-            });
+                lastIssue: null,
+            };
         }
 
         case "REMOVE_EVIDENCE_FROM_DRAFT":
@@ -310,13 +254,14 @@ export function ticketAttemptReducer(
                 return withIssue(state, result.issue);
             }
 
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
+            return {
+                ...state,
+                present: {
                     ...state.present,
                     findings: result.value,
                 },
-            });
+                lastIssue: null,
+            };
         }
 
         case "REMOVE_FILED_FINDING": {
@@ -329,25 +274,40 @@ export function ticketAttemptReducer(
                 return withIssue(state, result.issue);
             }
 
-            return applyUndoableRuleResult(state, {
-                ok: true,
-                value: {
+            return {
+                ...state,
+                present: {
                     ...state.present,
                     findings: result.value,
                 },
-            });
+                lastIssue: null,
+            };
         }
 
         case "SELECT_VERDICT":
-            return commitUndoablePresent(state, {
-                ...state.present,
-                verdict: {
-                    selectedVerdict: action.verdict,
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    verdict: {
+                        selectedVerdict: action.verdict,
+                    },
                 },
-            });
+                lastIssue: null,
+            };
 
         case "UNDO_LAST_ACTION": {
-            const result = undoLastAttemptAction(state);
+            const result = undoLastBoardAction(state);
+
+            if (!result.ok) {
+                return withIssue(state, result.issue);
+            }
+
+            return result.value;
+        }
+
+        case "REDO_LAST_ACTION": {
+            const result = redoLastBoardAction(state);
 
             if (!result.ok) {
                 return withIssue(state, result.issue);
@@ -363,6 +323,7 @@ export function ticketAttemptReducer(
                 history: {
                     ...state.history,
                     past: [],
+                    future: [],
                 },
                 lastIssue: null,
             };
