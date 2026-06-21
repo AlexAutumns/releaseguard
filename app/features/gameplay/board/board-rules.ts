@@ -4,16 +4,53 @@ import type {
     BoardConnection,
     BoardPosition,
     BoardState,
+    EvidenceThreadColorId,
     PinnedEvidence,
 } from "./board-state";
 
-const defaultBoardPositions: BoardPosition[] = [
-    { xPercent: 20, yPercent: 24 },
-    { xPercent: 50, yPercent: 22 },
-    { xPercent: 76, yPercent: 28 },
-    { xPercent: 28, yPercent: 56 },
-    { xPercent: 58, yPercent: 58 },
-    { xPercent: 82, yPercent: 64 },
+/**
+ * Temporary visible spawn area before real Pan/Viewport exists.
+ *
+ * This keeps cards in a readable cluster instead of spreading them too far
+ * across the whole board.
+ */
+const visibleSpawnBounds = {
+    minXPercent: 23,
+    maxXPercent: 77,
+    minYPercent: 29,
+    maxYPercent: 69,
+};
+
+/**
+ * Minimum spacing between card centers in board percentage units.
+ *
+ * Moderate spacing: enough to avoid overlap, but not so much that cards become
+ * scattered and hard to scan quickly.
+ */
+const minimumSpawnSpacing = {
+    xPercent: 23,
+    yPercent: 24,
+};
+
+const randomSpawnCandidateCount = 24;
+
+/**
+ * Sensible fallback positions with vertical variety.
+ */
+const fallbackSpawnCandidatePositions: BoardPosition[] = [
+    { xPercent: 30, yPercent: 34 },
+    { xPercent: 52, yPercent: 31 },
+    { xPercent: 72, yPercent: 37 },
+
+    { xPercent: 26, yPercent: 52 },
+    { xPercent: 50, yPercent: 50 },
+    { xPercent: 72, yPercent: 55 },
+
+    { xPercent: 35, yPercent: 66 },
+    { xPercent: 58, yPercent: 65 },
+
+    { xPercent: 40, yPercent: 40 },
+    { xPercent: 63, yPercent: 43 },
 ];
 
 /**
@@ -28,6 +65,40 @@ function clampPercent(value: number): number {
  */
 function toIdFragment(value: string): string {
     return value.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase();
+}
+
+/**
+ * Creates a simple deterministic hash from a string.
+ */
+function hashString(value: string): number {
+    let hash = 2166136261;
+
+    for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+    }
+
+    return hash >>> 0;
+}
+
+/**
+ * Creates a deterministic pseudo-random number generator.
+ *
+ * Reducer rules should avoid Math.random so state transitions remain easier to
+ * debug and reproduce.
+ */
+function createSeededRandom(seedValue: string): () => number {
+    let seed = hashString(seedValue);
+
+    return () => {
+        seed += 0x6d2b79f5;
+
+        let value = seed;
+        value = Math.imul(value ^ (value >>> 15), value | 1);
+        value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+
+        return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+    };
 }
 
 /**
@@ -53,12 +124,108 @@ function createPinnedEvidenceId(state: BoardState, evidenceId: string): string {
 }
 
 /**
- * Picks a default position for a newly pinned evidence card.
+ * Checks whether two candidate card centers are too close for comfortable use.
  */
-function getDefaultPinnedPosition(state: BoardState): BoardPosition {
-    return defaultBoardPositions[
-        state.pinnedEvidence.length % defaultBoardPositions.length
-    ];
+function isPositionTooClose(
+    leftPosition: BoardPosition,
+    rightPosition: BoardPosition,
+): boolean {
+    return (
+        Math.abs(leftPosition.xPercent - rightPosition.xPercent) <
+            minimumSpawnSpacing.xPercent &&
+        Math.abs(leftPosition.yPercent - rightPosition.yPercent) <
+            minimumSpawnSpacing.yPercent
+    );
+}
+
+/**
+ * Scores a candidate by its closest distance to existing pinned cards.
+ *
+ * Higher is better.
+ */
+function scoreCandidatePosition(
+    candidatePosition: BoardPosition,
+    existingPositions: readonly BoardPosition[],
+): number {
+    if (existingPositions.length === 0) {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    return Math.min(
+        ...existingPositions.map((existingPosition) => {
+            const deltaX =
+                candidatePosition.xPercent - existingPosition.xPercent;
+            const deltaY =
+                candidatePosition.yPercent - existingPosition.yPercent;
+
+            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        }),
+    );
+}
+
+/**
+ * Creates seeded spawn candidates inside the visible board area.
+ *
+ * Repinning uses pinnedAt in the seed, so the same evidence can land somewhere
+ * slightly different after being unpinned and pinned again.
+ */
+function createSpawnCandidatePositions(seedValue: string): BoardPosition[] {
+    const random = createSeededRandom(seedValue);
+    const randomCandidates: BoardPosition[] = [];
+
+    for (let index = 0; index < randomSpawnCandidateCount; index += 1) {
+        const xRange =
+            visibleSpawnBounds.maxXPercent - visibleSpawnBounds.minXPercent;
+        const yRange =
+            visibleSpawnBounds.maxYPercent - visibleSpawnBounds.minYPercent;
+
+        randomCandidates.push({
+            xPercent: visibleSpawnBounds.minXPercent + random() * xRange,
+            yPercent: visibleSpawnBounds.minYPercent + random() * yRange,
+        });
+    }
+
+    return [...randomCandidates, ...fallbackSpawnCandidatePositions];
+}
+
+/**
+ * Picks a readable spawn position for newly pinned evidence.
+ */
+function getDefaultPinnedPosition(
+    state: BoardState,
+    evidenceId: string,
+    pinnedAt: string,
+): BoardPosition {
+    const existingPositions = state.pinnedEvidence.map(
+        (pinnedEvidence) => pinnedEvidence.position,
+    );
+
+    const candidates = createSpawnCandidatePositions(
+        `${evidenceId}:${pinnedAt}:${state.pinnedEvidence.length}`,
+    );
+
+    const comfortableCandidates = candidates.filter((candidatePosition) =>
+        existingPositions.every(
+            (existingPosition) =>
+                !isPositionTooClose(candidatePosition, existingPosition),
+        ),
+    );
+
+    const candidatesToScore =
+        comfortableCandidates.length > 0 ? comfortableCandidates : candidates;
+
+    return candidatesToScore.reduce((bestPosition, candidatePosition) => {
+        const bestScore = scoreCandidatePosition(
+            bestPosition,
+            existingPositions,
+        );
+        const candidateScore = scoreCandidatePosition(
+            candidatePosition,
+            existingPositions,
+        );
+
+        return candidateScore > bestScore ? candidatePosition : bestPosition;
+    }, candidatesToScore[0]);
 }
 
 /**
@@ -75,22 +242,23 @@ function findPinnedEvidence(
 }
 
 /**
- * Creates a stable connection ID for two pinned evidence IDs.
+ * Creates a stable segment ID for one thread color and two pinned evidence IDs.
+ *
+ * Direction-insensitive: A -> B and B -> A are the same segment for the same
+ * thread color.
  */
 function createConnectionId(
+    threadId: EvidenceThreadColorId,
     fromPinnedEvidenceId: string,
     toPinnedEvidenceId: string,
 ): string {
     const [left, right] = [fromPinnedEvidenceId, toPinnedEvidenceId].sort();
 
-    return `connection-${toIdFragment(left)}-${toIdFragment(right)}`;
+    return `thread-${threadId}-${toIdFragment(left)}-${toIdFragment(right)}`;
 }
 
 /**
  * Pins evidence to the board.
- *
- * MVP rule: each evidence file can only be pinned once. This can be relaxed
- * later because board connections already reference pinned item IDs.
  */
 export function pinEvidenceToBoard(
     state: BoardState,
@@ -120,7 +288,7 @@ export function pinEvidenceToBoard(
     const pinnedEvidence: PinnedEvidence = {
         pinnedEvidenceId: createPinnedEvidenceId(state, evidenceId),
         evidenceId,
-        position: getDefaultPinnedPosition(state),
+        position: getDefaultPinnedPosition(state, evidenceId, pinnedAt),
         pinnedAt,
     };
 
@@ -132,7 +300,7 @@ export function pinEvidenceToBoard(
 }
 
 /**
- * Removes a pinned evidence item and any connections that reference it.
+ * Removes a pinned evidence item and every thread segment touching it.
  */
 export function unpinEvidenceFromBoard(
     state: BoardState,
@@ -218,10 +386,11 @@ export function selectPinnedEvidence(
 }
 
 /**
- * Connects two pinned evidence items.
+ * Creates one colored Evidence Thread segment between two pinned evidence cards.
  */
 export function connectPinnedEvidence(
     state: BoardState,
+    threadId: EvidenceThreadColorId,
     fromPinnedEvidenceId: string,
     toPinnedEvidenceId: string,
     createdAt: string,
@@ -250,6 +419,7 @@ export function connectPinnedEvidence(
     }
 
     const connectionId = createConnectionId(
+        threadId,
         fromPinnedEvidenceId,
         toPinnedEvidenceId,
     );
@@ -261,12 +431,13 @@ export function connectPinnedEvidence(
     ) {
         return ruleFail(
             "DUPLICATE_CONNECTION",
-            "Those pinned evidence items are already connected.",
+            "Those pinned evidence items are already connected with that thread color.",
         );
     }
 
     const connection: BoardConnection = {
         connectionId,
+        threadId,
         fromPinnedEvidenceId,
         toPinnedEvidenceId,
         createdAt,
@@ -275,11 +446,12 @@ export function connectPinnedEvidence(
     return ruleOk({
         ...state,
         connections: [...state.connections, connection],
+        selectedPinnedEvidenceId: toPinnedEvidenceId,
     });
 }
 
 /**
- * Removes a board connection.
+ * Removes one Evidence Thread segment.
  */
 export function disconnectBoardConnection(
     state: BoardState,

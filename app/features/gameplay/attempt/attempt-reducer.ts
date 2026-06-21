@@ -24,6 +24,7 @@ import {
 } from "./attempt-history";
 import type { TicketAttemptAction } from "./attempt-actions";
 import type { TicketAttemptState } from "./attempt-state";
+import type { ConnectInteractionState } from "../connect/connect-state";
 
 /**
  * Returns the same attempt state with a new gameplay issue.
@@ -75,6 +76,18 @@ function applyBoardRuleResult(
 }
 
 /**
+ * Clears only the temporary Connect anchor while preserving color/mode choices.
+ */
+function clearConnectAnchor(
+    connectInteraction: ConnectInteractionState,
+): ConnectInteractionState {
+    return {
+        ...connectInteraction,
+        pendingAnchorPinnedEvidenceId: null,
+    };
+}
+
+/**
  * Reducer for one ticket attempt.
  *
  * The reducer coordinates domain rules and history. Board undo/redo is isolated
@@ -92,6 +105,12 @@ export function ticketAttemptReducer(
                 present: {
                     ...state.present,
                     activeTool: action.toolId,
+                    connectInteraction:
+                        action.toolId === "connect"
+                            ? state.present.connectInteraction
+                            : clearConnectAnchor(
+                                  state.present.connectInteraction,
+                              ),
                 },
                 lastIssue: null,
             };
@@ -102,9 +121,119 @@ export function ticketAttemptReducer(
                 present: {
                     ...state.present,
                     activeTool: "select",
+                    connectInteraction: clearConnectAnchor(
+                        state.present.connectInteraction,
+                    ),
                 },
                 lastIssue: null,
             };
+
+        case "SET_CONNECT_THREAD_ID":
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    connectInteraction: {
+                        ...state.present.connectInteraction,
+                        activeThreadId: action.threadId,
+                        pendingAnchorPinnedEvidenceId: null,
+                    },
+                },
+                lastIssue: null,
+            };
+
+        case "SET_CONNECT_MODE":
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    connectInteraction: {
+                        ...state.present.connectInteraction,
+                        activeMode: action.mode,
+                        pendingAnchorPinnedEvidenceId: null,
+                    },
+                },
+                lastIssue: null,
+            };
+
+        case "CLEAR_CONNECT_ANCHOR":
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    connectInteraction: clearConnectAnchor(
+                        state.present.connectInteraction,
+                    ),
+                },
+                lastIssue: null,
+            };
+
+        case "USE_CONNECT_STRING_ON_PINNED_EVIDENCE": {
+            if (state.present.activeTool !== "connect") {
+                return state;
+            }
+
+            if (state.present.connectInteraction.activeMode !== "string") {
+                return state;
+            }
+
+            const pendingAnchorPinnedEvidenceId =
+                state.present.connectInteraction.pendingAnchorPinnedEvidenceId;
+
+            if (!pendingAnchorPinnedEvidenceId) {
+                const selectResult = selectPinnedEvidence(
+                    state.present.board,
+                    action.pinnedEvidenceId,
+                );
+
+                if (!selectResult.ok) {
+                    return withIssue(state, selectResult.issue);
+                }
+
+                return {
+                    ...state,
+                    present: {
+                        ...state.present,
+                        board: selectResult.value,
+                        connectInteraction: {
+                            ...state.present.connectInteraction,
+                            pendingAnchorPinnedEvidenceId:
+                                action.pinnedEvidenceId,
+                        },
+                    },
+                    lastIssue: null,
+                };
+            }
+
+            const connectResult = connectPinnedEvidence(
+                state.present.board,
+                state.present.connectInteraction.activeThreadId,
+                pendingAnchorPinnedEvidenceId,
+                action.pinnedEvidenceId,
+                action.nowIso,
+            );
+
+            if (!connectResult.ok) {
+                return withIssue(state, connectResult.issue);
+            }
+
+            const committedState = commitBoardChange(
+                state,
+                connectResult.value,
+            );
+
+            return {
+                ...committedState,
+                present: {
+                    ...committedState.present,
+                    connectInteraction: {
+                        ...committedState.present.connectInteraction,
+                        pendingAnchorPinnedEvidenceId: action.pinnedEvidenceId,
+                    },
+                },
+                lastIssue: null,
+            };
+        }
 
         case "MARK_EVIDENCE_INSPECTED": {
             const result = markEvidenceInspected(
@@ -144,7 +273,22 @@ export function ticketAttemptReducer(
                 action.pinnedEvidenceId,
             );
 
-            return applyBoardRuleResult(state, result);
+            const updatedState = applyBoardRuleResult(state, result);
+
+            return {
+                ...updatedState,
+                present: {
+                    ...updatedState.present,
+                    connectInteraction:
+                        state.present.connectInteraction
+                            .pendingAnchorPinnedEvidenceId ===
+                        action.pinnedEvidenceId
+                            ? clearConnectAnchor(
+                                  updatedState.present.connectInteraction,
+                              )
+                            : updatedState.present.connectInteraction,
+                },
+            };
         }
 
         case "MOVE_PINNED_EVIDENCE": {
@@ -180,6 +324,7 @@ export function ticketAttemptReducer(
         case "CONNECT_PINNED_EVIDENCE": {
             const result = connectPinnedEvidence(
                 state.present.board,
+                action.threadId,
                 action.fromPinnedEvidenceId,
                 action.toPinnedEvidenceId,
                 action.nowIso,

@@ -22,8 +22,8 @@ export const investigationToolCatalog: InvestigationToolDefinition[] = [
         icon: "╱",
         label: "Connect",
         description:
-            "Create and cut colored Evidence Threads between pinned clues. Coming next.",
-        isMvpEnabled: false,
+            "Create and cut colored Evidence Threads between pinned clues.",
+        isMvpEnabled: true,
     },
     {
         id: "arrange",
@@ -31,6 +31,13 @@ export const investigationToolCatalog: InvestigationToolDefinition[] = [
         label: "Arrange",
         description:
             "Reposition pinned clues on the board. Planned for a later build.",
+        isMvpEnabled: false,
+    },
+    {
+        id: "pan",
+        icon: "✣",
+        label: "Pan",
+        description: "Move around a larger board. Planned for a later build.",
         isMvpEnabled: false,
     },
 ];

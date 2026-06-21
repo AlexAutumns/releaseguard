@@ -1,4 +1,8 @@
-import type { BoardPosition } from "../board/board-state";
+import type {
+    BoardPosition,
+    EvidenceThreadColorId,
+} from "../board/board-state";
+import type { ConnectToolMode } from "../connect/connect-state";
 import type { DraftFindingPatch } from "../findings/finding-rules";
 import type { InvestigationToolId } from "../tools/tool-types";
 import type { ReleaseVerdict } from "../../content/content-types";
@@ -16,6 +20,22 @@ export type TicketAttemptAction =
       }
     | {
           type: "CLEAR_ACTIVE_TOOL";
+      }
+    | {
+          type: "SET_CONNECT_THREAD_ID";
+          threadId: EvidenceThreadColorId;
+      }
+    | {
+          type: "SET_CONNECT_MODE";
+          mode: ConnectToolMode;
+      }
+    | {
+          type: "CLEAR_CONNECT_ANCHOR";
+      }
+    | {
+          type: "USE_CONNECT_STRING_ON_PINNED_EVIDENCE";
+          pinnedEvidenceId: string;
+          nowIso: string;
       }
     | {
           type: "MARK_EVIDENCE_INSPECTED";
@@ -41,6 +61,7 @@ export type TicketAttemptAction =
       }
     | {
           type: "CONNECT_PINNED_EVIDENCE";
+          threadId: EvidenceThreadColorId;
           fromPinnedEvidenceId: string;
           toPinnedEvidenceId: string;
           nowIso: string;

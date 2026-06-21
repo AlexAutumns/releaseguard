@@ -12,9 +12,9 @@ import type {
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
-import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
 import { cn } from "../../lib/cn";
 import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
+import { BoardThreadLayer } from "./BoardThreadLayer";
 import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
 import { FiledFindingCard } from "./FiledFindingCard";
 import { FindingDraftForm } from "./FindingDraftForm";
@@ -68,7 +68,11 @@ export function InvestigationScreen({
 
                     <div className="grid min-h-0 flex-1 place-items-center">
                         <EmptyState
-                            description={`Requested shift: ${requestedShiftId || "missing"} | Requested ticket: ${requestedTicketId || "missing"}`}
+                            description={`Requested shift: ${
+                                requestedShiftId || "missing"
+                            } | Requested ticket: ${
+                                requestedTicketId || "missing"
+                            }`}
                             title="The investigation desk cannot be opened"
                         />
                     </div>
@@ -193,10 +197,21 @@ function InvestigationWorkspace({
                 canRedo={controller.canRedo}
                 canReset={controller.canReset}
                 canUndo={controller.canUndo}
+                connectInteraction={controller.connectInteraction}
+                onClearConnectAnchor={controller.clearConnectAnchor}
                 onRedo={controller.redoLastAction}
                 onReset={controller.resetAttempt}
                 onSelectTool={controller.setActiveTool}
+                onSetConnectMode={controller.setConnectMode}
+                onSetConnectThreadId={controller.setConnectThreadId}
                 onUndo={controller.undoLastAction}
+                pendingConnectAnchorLabel={controller.pendingConnectAnchorLabel}
+                pinnedCount={
+                    controller.attempt.present.board.pinnedEvidence.length
+                }
+                segmentCount={
+                    controller.attempt.present.board.connections.length
+                }
             />
 
             <EvidencePreviewDialog
@@ -389,6 +404,14 @@ interface InvestigationBoardPanelProps {
  */
 function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
     const activeTool = controller.attempt.present.activeTool;
+    const [hoveredConnectionId, setHoveredConnectionId] = useState<
+        string | null
+    >(null);
+
+    const hoveredConnection =
+        controller.attempt.present.board.connections.find(
+            (connection) => connection.connectionId === hoveredConnectionId,
+        ) ?? null;
 
     return (
         <Panel className="h-full min-h-0" padding="sm" tone="cork">
@@ -435,8 +458,24 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                 controller.selectPinnedEvidence(null)
                             }
                         >
+                            <BoardThreadLayer
+                                activeMode={
+                                    controller.connectInteraction.activeMode
+                                }
+                                activeTool={activeTool}
+                                connections={
+                                    controller.attempt.present.board.connections
+                                }
+                                hoveredConnectionId={hoveredConnectionId}
+                                onCutConnection={controller.cutBoardConnection}
+                                onHoveredConnectionChange={
+                                    setHoveredConnectionId
+                                }
+                                pinnedBoardItems={controller.pinnedBoardItems}
+                            />
+
                             {controller.pinnedBoardItems.length === 0 ? (
-                                <div className="grid h-full place-items-center">
+                                <div className="relative z-10 grid h-full place-items-center">
                                     <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
                                         <p className="text-base font-black text-rg-paper-strong">
                                             Board is clear
@@ -451,35 +490,83 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                     </div>
                                 </div>
                             ) : (
-                                controller.pinnedBoardItems.map((item) => (
-                                    <BoardPinnedEvidenceCard
-                                        activeTool={activeTool}
-                                        evidenceCard={item.evidenceCard}
-                                        isSelected={item.isSelected}
-                                        key={
-                                            item.pinnedEvidence.pinnedEvidenceId
-                                        }
-                                        onActivate={() =>
-                                            controller.activatePinnedBoardEvidence(
+                                controller.pinnedBoardItems.map((item) => {
+                                    const isHoveredThreadEndpoint =
+                                        Boolean(hoveredConnection) &&
+                                        (hoveredConnection?.fromPinnedEvidenceId ===
+                                            item.pinnedEvidence
+                                                .pinnedEvidenceId ||
+                                            hoveredConnection?.toPinnedEvidenceId ===
                                                 item.pinnedEvidence
-                                                    .pinnedEvidenceId,
-                                                item.evidenceCard.id,
-                                            )
-                                        }
-                                        onInspect={() =>
-                                            controller.openEvidencePreview(
-                                                item.evidenceCard.id,
-                                            )
-                                        }
-                                        onUnpin={() =>
-                                            controller.unpinEvidence(
+                                                    .pinnedEvidenceId);
+
+                                    const visibleThreadIds = Array.from(
+                                        new Set(
+                                            controller.attempt.present.board.connections
+                                                .filter(
+                                                    (connection) =>
+                                                        connection.fromPinnedEvidenceId ===
+                                                            item.pinnedEvidence
+                                                                .pinnedEvidenceId ||
+                                                        connection.toPinnedEvidenceId ===
+                                                            item.pinnedEvidence
+                                                                .pinnedEvidenceId,
+                                                )
+                                                .map(
+                                                    (connection) =>
+                                                        connection.threadId,
+                                                ),
+                                        ),
+                                    );
+
+                                    return (
+                                        <BoardPinnedEvidenceCard
+                                            activeThreadId={
+                                                controller.connectInteraction
+                                                    .activeThreadId
+                                            }
+                                            activeTool={activeTool}
+                                            evidenceCard={item.evidenceCard}
+                                            highlightedThreadId={
+                                                isHoveredThreadEndpoint &&
+                                                hoveredConnection
+                                                    ? hoveredConnection.threadId
+                                                    : null
+                                            }
+                                            isConnectAnchor={
+                                                controller.connectInteraction
+                                                    .pendingAnchorPinnedEvidenceId ===
                                                 item.pinnedEvidence
-                                                    .pinnedEvidenceId,
-                                            )
-                                        }
-                                        pinnedEvidence={item.pinnedEvidence}
-                                    />
-                                ))
+                                                    .pinnedEvidenceId
+                                            }
+                                            isSelected={item.isSelected}
+                                            key={
+                                                item.pinnedEvidence
+                                                    .pinnedEvidenceId
+                                            }
+                                            onActivate={() =>
+                                                controller.activatePinnedBoardEvidence(
+                                                    item.pinnedEvidence
+                                                        .pinnedEvidenceId,
+                                                    item.evidenceCard.id,
+                                                )
+                                            }
+                                            onInspect={() =>
+                                                controller.openEvidencePreview(
+                                                    item.evidenceCard.id,
+                                                )
+                                            }
+                                            onUnpin={() =>
+                                                controller.unpinEvidence(
+                                                    item.pinnedEvidence
+                                                        .pinnedEvidenceId,
+                                                )
+                                            }
+                                            pinnedEvidence={item.pinnedEvidence}
+                                            visibleThreadIds={visibleThreadIds}
+                                        />
+                                    );
+                                })
                             )}
                         </div>
                     </div>

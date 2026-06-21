@@ -4,7 +4,7 @@
  * Evidence actions such as Inspect and Pin are intentionally not board modes.
  * They live directly on evidence files, evidence modals, and pinned cards.
  */
-export type InvestigationToolId = "select" | "connect" | "arrange";
+export type InvestigationToolId = "select" | "connect" | "arrange" | "pan";
 
 /**
  * Display metadata for one investigation board tool.

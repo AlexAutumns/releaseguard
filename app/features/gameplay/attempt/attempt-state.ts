@@ -4,6 +4,7 @@ import type { FindingState } from "../findings/finding-state";
 import type { GameplayRuleIssue } from "../shared/rule-result";
 import type { InvestigationToolId } from "../tools/tool-types";
 import type { VerdictState } from "../verdict/verdict-state";
+import type { ConnectInteractionState } from "../connect/connect-state";
 
 /**
  * Stable context for one ticket attempt.
@@ -27,6 +28,7 @@ export interface AttemptContext {
  */
 export interface AttemptPresentState {
     activeTool: InvestigationToolId;
+    connectInteraction: ConnectInteractionState;
     evidence: EvidenceInteractionState;
     board: BoardState;
     findings: FindingState;

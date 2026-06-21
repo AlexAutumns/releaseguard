@@ -8,10 +8,23 @@ export interface BoardPosition {
 }
 
 /**
+ * Fixed Evidence Thread color channels for the MVP.
+ *
+ * These are intentionally limited. The player uses color as the grouping tool
+ * instead of creating custom thread names or managing a separate thread list.
+ */
+export type EvidenceThreadColorId =
+    | "red"
+    | "blue"
+    | "green"
+    | "amber"
+    | "violet";
+
+/**
  * One pinned evidence card on the investigation board.
  *
- * Connections reference pinnedEvidenceId instead of evidenceId so future
- * versions can support multiple pins or copied evidence cards if needed.
+ * Thread segments reference pinnedEvidenceId instead of evidenceId so future
+ * builds can support copied cards or multiple board instances if needed.
  */
 export interface PinnedEvidence {
     pinnedEvidenceId: string;
@@ -21,10 +34,14 @@ export interface PinnedEvidence {
 }
 
 /**
- * One connection between two pinned evidence cards.
+ * One colored Evidence Thread segment between two pinned evidence cards.
+ *
+ * Segments are stored individually so Scissors mode can cut one line without
+ * unpinning cards or destroying the rest of a chain.
  */
 export interface BoardConnection {
     connectionId: string;
+    threadId: EvidenceThreadColorId;
     fromPinnedEvidenceId: string;
     toPinnedEvidenceId: string;
     createdAt: string;

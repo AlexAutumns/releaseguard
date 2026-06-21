@@ -10,7 +10,14 @@ import { useGameNotifications } from "../../features/game-notifications/use-game
 import { createTicketAttemptState } from "../../features/gameplay/attempt/attempt-factory";
 import { ticketAttemptReducer } from "../../features/gameplay/attempt/attempt-reducer";
 import type { TicketAttemptState } from "../../features/gameplay/attempt/attempt-state";
-import type { PinnedEvidence } from "../../features/gameplay/board/board-state";
+import type {
+    EvidenceThreadColorId,
+    PinnedEvidence,
+} from "../../features/gameplay/board/board-state";
+import type {
+    ConnectInteractionState,
+    ConnectToolMode,
+} from "../../features/gameplay/connect/connect-state";
 import type { DraftFindingPatch } from "../../features/gameplay/findings/finding-rules";
 import type { FiledFinding } from "../../features/gameplay/findings/finding-state";
 import {
@@ -73,14 +80,19 @@ export interface FiledFindingItem {
 
 /**
  * Screen controller result for the investigation workspace.
+ *
+ * This hook deliberately exposes narrow view models and action handlers so
+ * InvestigationScreen can stay focused on rendering instead of reducer logic.
  */
 export interface InvestigationController {
     attempt: TicketAttemptState;
+    connectInteraction: ConnectInteractionState;
     evidenceItems: EvidenceCabinetItem[];
     pinnedBoardItems: BoardPinnedEvidenceItem[];
     linkableEvidenceItems: LinkableEvidenceItem[];
     findingTypeItems: FindingTypeItem[];
     filedFindingItems: FiledFindingItem[];
+    pendingConnectAnchorLabel: string | null;
     previewEvidenceCard?: EvidenceCardDefinition;
     canFileDraftFinding: boolean;
     canUndo: boolean;
@@ -98,6 +110,10 @@ export interface InvestigationController {
     unpinEvidence: (pinnedEvidenceId: string) => void;
     selectPinnedEvidence: (pinnedEvidenceId: string | null) => void;
     setActiveTool: (toolId: InvestigationToolId) => void;
+    setConnectThreadId: (threadId: EvidenceThreadColorId) => void;
+    setConnectMode: (mode: ConnectToolMode) => void;
+    clearConnectAnchor: () => void;
+    cutBoardConnection: (connectionId: string) => void;
     updateDraftFinding: (patch: DraftFindingPatch) => void;
     selectFindingType: (findingTypeId: FindingTypeId) => void;
     toggleDraftEvidenceLink: (evidenceId: string) => void;
@@ -231,8 +247,7 @@ export function useInvestigationController({
         return findingTypeCatalog.map((findingType) => ({
             findingType,
             isSelected:
-                attempt.present.findings.draft.findingTypeId ===
-                findingType.id,
+                attempt.present.findings.draft.findingTypeId === findingType.id,
         }));
     }, [attempt.present.findings.draft.findingTypeId]);
 
@@ -243,13 +258,34 @@ export function useInvestigationController({
             linkedEvidenceCards: filedFinding.linkedEvidenceIds
                 .map((evidenceId) => evidenceById.get(evidenceId))
                 .filter(
-                    (
-                        evidenceCard,
-                    ): evidenceCard is EvidenceCardDefinition =>
+                    (evidenceCard): evidenceCard is EvidenceCardDefinition =>
                         Boolean(evidenceCard),
                 ),
         }));
     }, [attempt.present.findings.filedFindings, evidenceById]);
+
+    const pendingConnectAnchorLabel = useMemo(() => {
+        const pendingAnchorPinnedEvidenceId =
+            attempt.present.connectInteraction.pendingAnchorPinnedEvidenceId;
+
+        if (!pendingAnchorPinnedEvidenceId) {
+            return null;
+        }
+
+        const pinnedEvidence = attempt.present.board.pinnedEvidence.find(
+            (item) => item.pinnedEvidenceId === pendingAnchorPinnedEvidenceId,
+        );
+
+        if (!pinnedEvidence) {
+            return null;
+        }
+
+        return evidenceById.get(pinnedEvidence.evidenceId)?.title ?? null;
+    }, [
+        attempt.present.board.pinnedEvidence,
+        attempt.present.connectInteraction.pendingAnchorPinnedEvidenceId,
+        evidenceById,
+    ]);
 
     const previewEvidenceCard = previewEvidenceId
         ? evidenceById.get(previewEvidenceId)
@@ -260,8 +296,8 @@ export function useInvestigationController({
     const canFileDraftFinding = Boolean(
         (draft.linkedEvidenceIds.length > 0 ||
             draft.linkedThreadIds.length > 0) &&
-            draft.findingTypeId &&
-            draft.severity,
+        draft.findingTypeId &&
+        draft.severity,
     );
 
     const canUndo = attempt.history.past.length > 0;
@@ -367,15 +403,68 @@ export function useInvestigationController({
 
     const activatePinnedBoardEvidence = useCallback(
         (pinnedEvidenceId: string, _evidenceId: string) => {
+            if (
+                attempt.present.activeTool === "connect" &&
+                attempt.present.connectInteraction.activeMode === "string"
+            ) {
+                dispatch({
+                    type: "USE_CONNECT_STRING_ON_PINNED_EVIDENCE",
+                    pinnedEvidenceId,
+                    nowIso: new Date().toISOString(),
+                });
+                return;
+            }
+
+            if (
+                attempt.present.activeTool === "connect" &&
+                attempt.present.connectInteraction.activeMode === "scissors"
+            ) {
+                return;
+            }
+
             selectPinnedEvidence(pinnedEvidenceId);
         },
-        [selectPinnedEvidence],
+        [
+            attempt.present.activeTool,
+            attempt.present.connectInteraction.activeMode,
+            selectPinnedEvidence,
+        ],
     );
 
     const setActiveTool = useCallback((toolId: InvestigationToolId) => {
         dispatch({
             type: "SET_ACTIVE_TOOL",
             toolId,
+        });
+    }, []);
+
+    const setConnectThreadId = useCallback(
+        (threadId: EvidenceThreadColorId) => {
+            dispatch({
+                type: "SET_CONNECT_THREAD_ID",
+                threadId,
+            });
+        },
+        [],
+    );
+
+    const setConnectMode = useCallback((mode: ConnectToolMode) => {
+        dispatch({
+            type: "SET_CONNECT_MODE",
+            mode,
+        });
+    }, []);
+
+    const clearConnectAnchor = useCallback(() => {
+        dispatch({
+            type: "CLEAR_CONNECT_ANCHOR",
+        });
+    }, []);
+
+    const cutBoardConnection = useCallback((connectionId: string) => {
+        dispatch({
+            type: "DISCONNECT_CONNECTION",
+            connectionId,
         });
     }, []);
 
@@ -455,11 +544,13 @@ export function useInvestigationController({
 
     return {
         attempt,
+        connectInteraction: attempt.present.connectInteraction,
         evidenceItems,
         pinnedBoardItems,
         linkableEvidenceItems,
         findingTypeItems,
         filedFindingItems,
+        pendingConnectAnchorLabel,
         previewEvidenceCard,
         canFileDraftFinding,
         canUndo,
@@ -475,6 +566,10 @@ export function useInvestigationController({
         unpinEvidence,
         selectPinnedEvidence,
         setActiveTool,
+        setConnectThreadId,
+        setConnectMode,
+        clearConnectAnchor,
+        cutBoardConnection,
         updateDraftFinding,
         selectFindingType,
         toggleDraftEvidenceLink,

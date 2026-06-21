@@ -3,6 +3,7 @@ import { createInitialEvidenceInteractionState } from "../evidence/evidence-stat
 import { createInitialFindingState } from "../findings/finding-state";
 import { createInitialVerdictState } from "../verdict/verdict-state";
 import type { AttemptPresentState, TicketAttemptState } from "./attempt-state";
+import { createInitialConnectInteractionState } from "../connect/connect-state";
 
 const DEFAULT_HISTORY_LIMIT = 20;
 
@@ -33,6 +34,7 @@ function createAttemptId(ticketId: string, startedAt: string): string {
 export function createInitialAttemptPresentState(): AttemptPresentState {
     return {
         activeTool: "select",
+        connectInteraction: createInitialConnectInteractionState(),
         evidence: createInitialEvidenceInteractionState(),
         board: createInitialBoardState(),
         findings: createInitialFindingState(),
