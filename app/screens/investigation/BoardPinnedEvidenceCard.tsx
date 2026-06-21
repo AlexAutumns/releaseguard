@@ -55,11 +55,9 @@ export function BoardPinnedEvidenceCard({
             }}
             tabIndex={0}
             title={
-                activeTool === "inspect"
-                    ? "Inspect this pinned evidence."
-                    : activeTool === "pin"
-                      ? "This evidence is already pinned."
-                      : "Select this pinned evidence."
+                activeTool === "connect"
+                    ? "Connect mode will use pinned cards in the next build."
+                    : "Select this pinned evidence."
             }
         >
             <button

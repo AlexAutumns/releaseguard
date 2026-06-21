@@ -8,14 +8,18 @@ import {
 } from "./finding-state";
 
 /**
- * Patch object for updating the notebook draft finding.
+ * Fields edited directly by the draft finding form.
+ *
+ * Evidence and thread support are managed through dedicated attach/remove rules
+ * so the UI can later support chips, evidence groups, and colored threads
+ * without replacing arrays through generic form patches.
  */
 export type DraftFindingPatch = Partial<
-    Pick<DraftFinding, "category" | "severity" | "summary">
+    Pick<DraftFinding, "findingTypeId" | "severity" | "optionalNote">
 >;
 
 /**
- * Updates draft finding fields.
+ * Updates editable draft finding fields.
  */
 export function updateDraftFinding(
     state: FindingState,
@@ -31,7 +35,7 @@ export function updateDraftFinding(
 }
 
 /**
- * Attaches evidence to the current draft finding.
+ * Attaches one evidence file to the current draft finding.
  */
 export function attachEvidenceToDraft(
     state: FindingState,
@@ -60,7 +64,7 @@ export function attachEvidenceToDraft(
 }
 
 /**
- * Removes evidence from the current draft finding.
+ * Removes one evidence file from the current draft finding.
  */
 export function removeEvidenceFromDraft(
     state: FindingState,
@@ -72,6 +76,47 @@ export function removeEvidenceFromDraft(
             ...state.draft,
             linkedEvidenceIds: state.draft.linkedEvidenceIds.filter(
                 (linkedEvidenceId) => linkedEvidenceId !== evidenceId,
+            ),
+        },
+    };
+}
+
+/**
+ * Links a future Evidence Thread to the current draft finding.
+ *
+ * Reserved for Build 001F-B. Keeping this rule now avoids another disruptive
+ * state-shape change when Connect becomes useful.
+ */
+export function attachThreadToDraft(
+    state: FindingState,
+    threadId: string,
+): RuleResult<FindingState> {
+    if (state.draft.linkedThreadIds.includes(threadId)) {
+        return ruleOk(state);
+    }
+
+    return ruleOk({
+        ...state,
+        draft: {
+            ...state.draft,
+            linkedThreadIds: [...state.draft.linkedThreadIds, threadId],
+        },
+    });
+}
+
+/**
+ * Removes one future Evidence Thread from the current draft finding.
+ */
+export function removeThreadFromDraft(
+    state: FindingState,
+    threadId: string,
+): FindingState {
+    return {
+        ...state,
+        draft: {
+            ...state.draft,
+            linkedThreadIds: state.draft.linkedThreadIds.filter(
+                (linkedThreadId) => linkedThreadId !== threadId,
             ),
         },
     };
@@ -97,25 +142,34 @@ function createFiledFindingId(state: FindingState): string {
 }
 
 /**
- * Files the current draft as a player finding.
+ * Files the current draft as a submitted case finding.
+ *
+ * Required:
+ * - evidence or thread support,
+ * - generic finding stamp,
+ * - severity.
+ *
+ * Optional note is not required.
  */
 export function fileDraftFinding(
     state: FindingState,
     createdAt: string,
 ): RuleResult<FindingState> {
-    const summary = state.draft.summary.trim();
+    const hasEvidenceSupport =
+        state.draft.linkedEvidenceIds.length > 0 ||
+        state.draft.linkedThreadIds.length > 0;
 
-    if (!summary) {
+    if (!hasEvidenceSupport) {
         return ruleFail(
-            "FINDING_SUMMARY_REQUIRED",
-            "Write a short finding summary before filing it.",
+            "FINDING_SUPPORT_REQUIRED",
+            "Attach evidence support before filing the finding.",
         );
     }
 
-    if (!state.draft.category) {
+    if (!state.draft.findingTypeId) {
         return ruleFail(
-            "FINDING_CATEGORY_REQUIRED",
-            "Choose a risk category before filing the finding.",
+            "FINDING_TYPE_REQUIRED",
+            "Choose a finding stamp before filing the finding.",
         );
     }
 
@@ -126,19 +180,13 @@ export function fileDraftFinding(
         );
     }
 
-    if (state.draft.linkedEvidenceIds.length === 0) {
-        return ruleFail(
-            "FINDING_EVIDENCE_REQUIRED",
-            "Attach at least one evidence file before filing the finding.",
-        );
-    }
-
     const filedFinding: FiledFinding = {
         filedFindingId: createFiledFindingId(state),
-        category: state.draft.category,
+        findingTypeId: state.draft.findingTypeId,
         severity: state.draft.severity,
-        summary,
-        linkedEvidenceIds: state.draft.linkedEvidenceIds,
+        linkedEvidenceIds: [...state.draft.linkedEvidenceIds],
+        linkedThreadIds: [...state.draft.linkedThreadIds],
+        optionalNote: state.draft.optionalNote.trim(),
         createdAt,
     };
 
@@ -150,7 +198,7 @@ export function fileDraftFinding(
 }
 
 /**
- * Removes one filed finding.
+ * Removes one filed finding from the notebook.
  */
 export function removeFiledFinding(
     state: FindingState,

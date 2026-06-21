@@ -3,14 +3,23 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import type {
     EvidenceCardDefinition,
     ReleaseTicketDefinition,
+    ReleaseVerdict,
     ShiftDefinition,
 } from "../../features/content/content-types";
+import { useGameNotifications } from "../../features/game-notifications/use-game-notifications";
 import { createTicketAttemptState } from "../../features/gameplay/attempt/attempt-factory";
 import { ticketAttemptReducer } from "../../features/gameplay/attempt/attempt-reducer";
 import type { TicketAttemptState } from "../../features/gameplay/attempt/attempt-state";
 import type { PinnedEvidence } from "../../features/gameplay/board/board-state";
+import type { DraftFindingPatch } from "../../features/gameplay/findings/finding-rules";
+import type { FiledFinding } from "../../features/gameplay/findings/finding-state";
+import {
+    findingTypeCatalog,
+    getFindingTypeById,
+    type FindingTypeDefinition,
+    type FindingTypeId,
+} from "../../features/gameplay/findings/finding-types";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
-import { useGameNotifications } from "../../features/game-notifications/use-game-notifications";
 
 export interface UseInvestigationControllerInput {
     shift: ShiftDefinition;
@@ -36,16 +45,44 @@ export interface BoardPinnedEvidenceItem {
 }
 
 /**
+ * Evidence support item shown in the New Finding casework tab.
+ */
+export interface LinkableEvidenceItem {
+    evidenceCard: EvidenceCardDefinition;
+    isInspected: boolean;
+    isPinned: boolean;
+    isLinkedToDraft: boolean;
+}
+
+/**
+ * Generic finding stamp option shown in the New Finding casework tab.
+ */
+export interface FindingTypeItem {
+    findingType: FindingTypeDefinition;
+    isSelected: boolean;
+}
+
+/**
+ * Filed finding view model with resolved display data.
+ */
+export interface FiledFindingItem {
+    filedFinding: FiledFinding;
+    findingType?: FindingTypeDefinition;
+    linkedEvidenceCards: EvidenceCardDefinition[];
+}
+
+/**
  * Screen controller result for the investigation workspace.
- *
- * This keeps gameplay state handling out of InvestigationScreen so the screen
- * can focus on layout and rendering.
  */
 export interface InvestigationController {
     attempt: TicketAttemptState;
     evidenceItems: EvidenceCabinetItem[];
     pinnedBoardItems: BoardPinnedEvidenceItem[];
+    linkableEvidenceItems: LinkableEvidenceItem[];
+    findingTypeItems: FindingTypeItem[];
+    filedFindingItems: FiledFindingItem[];
     previewEvidenceCard?: EvidenceCardDefinition;
+    canFileDraftFinding: boolean;
     canUndo: boolean;
     canRedo: boolean;
     canReset: boolean;
@@ -61,12 +98,15 @@ export interface InvestigationController {
     unpinEvidence: (pinnedEvidenceId: string) => void;
     selectPinnedEvidence: (pinnedEvidenceId: string | null) => void;
     setActiveTool: (toolId: InvestigationToolId) => void;
+    updateDraftFinding: (patch: DraftFindingPatch) => void;
+    selectFindingType: (findingTypeId: FindingTypeId) => void;
+    toggleDraftEvidenceLink: (evidenceId: string) => void;
+    fileDraftFinding: () => void;
+    removeFiledFinding: (filedFindingId: string) => void;
+    selectVerdict: (verdict: ReleaseVerdict) => void;
     undoLastAction: () => void;
     redoLastAction: () => void;
     resetAttempt: () => void;
-    // clearLastIssue: () => void;
-
-    // Notifications
     notifications: ReturnType<typeof useGameNotifications>["notifications"];
     dismissNotification: ReturnType<
         typeof useGameNotifications
@@ -74,10 +114,10 @@ export interface InvestigationController {
 }
 
 /**
- * Hook that connects the investigation screen to the gameplay attempt reducer.
+ * Connects the investigation screen to the ticket attempt reducer.
  *
- * Layout state such as folded panels should stay in the screen. Gameplay state,
- * such as pinned evidence and active tool, belongs in this controller/reducer.
+ * Gameplay state stays in the reducer. This hook resolves display-friendly view
+ * models for the screen and exposes narrow action handlers.
  */
 export function useInvestigationController({
     shift,
@@ -127,6 +167,10 @@ export function useInvestigationController({
         return new Set(attempt.present.evidence.inspectedEvidenceIds);
     }, [attempt.present.evidence.inspectedEvidenceIds]);
 
+    const draftLinkedEvidenceIds = useMemo(() => {
+        return new Set(attempt.present.findings.draft.linkedEvidenceIds);
+    }, [attempt.present.findings.draft.linkedEvidenceIds]);
+
     const evidenceItems = useMemo<EvidenceCabinetItem[]>(() => {
         return ticket.evidenceCards.map((evidenceCard) => ({
             evidenceCard,
@@ -161,9 +205,64 @@ export function useInvestigationController({
         evidenceById,
     ]);
 
+    const linkableEvidenceItems = useMemo<LinkableEvidenceItem[]>(() => {
+        return evidenceItems
+            .filter((item) => item.isPinned || item.isInspected)
+            .sort((left, right) => {
+                if (left.isPinned !== right.isPinned) {
+                    return left.isPinned ? -1 : 1;
+                }
+
+                return left.evidenceCard.title.localeCompare(
+                    right.evidenceCard.title,
+                );
+            })
+            .map((item) => ({
+                evidenceCard: item.evidenceCard,
+                isInspected: item.isInspected,
+                isPinned: item.isPinned,
+                isLinkedToDraft: draftLinkedEvidenceIds.has(
+                    item.evidenceCard.id,
+                ),
+            }));
+    }, [draftLinkedEvidenceIds, evidenceItems]);
+
+    const findingTypeItems = useMemo<FindingTypeItem[]>(() => {
+        return findingTypeCatalog.map((findingType) => ({
+            findingType,
+            isSelected:
+                attempt.present.findings.draft.findingTypeId ===
+                findingType.id,
+        }));
+    }, [attempt.present.findings.draft.findingTypeId]);
+
+    const filedFindingItems = useMemo<FiledFindingItem[]>(() => {
+        return attempt.present.findings.filedFindings.map((filedFinding) => ({
+            filedFinding,
+            findingType: getFindingTypeById(filedFinding.findingTypeId),
+            linkedEvidenceCards: filedFinding.linkedEvidenceIds
+                .map((evidenceId) => evidenceById.get(evidenceId))
+                .filter(
+                    (
+                        evidenceCard,
+                    ): evidenceCard is EvidenceCardDefinition =>
+                        Boolean(evidenceCard),
+                ),
+        }));
+    }, [attempt.present.findings.filedFindings, evidenceById]);
+
     const previewEvidenceCard = previewEvidenceId
         ? evidenceById.get(previewEvidenceId)
         : undefined;
+
+    const draft = attempt.present.findings.draft;
+
+    const canFileDraftFinding = Boolean(
+        (draft.linkedEvidenceIds.length > 0 ||
+            draft.linkedThreadIds.length > 0) &&
+            draft.findingTypeId &&
+            draft.severity,
+    );
 
     const canUndo = attempt.history.past.length > 0;
     const canRedo = attempt.history.future.length > 0;
@@ -174,6 +273,11 @@ export function useInvestigationController({
         attempt.present.evidence.inspectedEvidenceIds.length > 0 ||
         attempt.present.board.pinnedEvidence.length > 0 ||
         attempt.present.board.connections.length > 0 ||
+        draft.findingTypeId !== null ||
+        draft.severity !== null ||
+        draft.linkedEvidenceIds.length > 0 ||
+        draft.linkedThreadIds.length > 0 ||
+        draft.optionalNote.trim().length > 0 ||
         attempt.present.findings.filedFindings.length > 0 ||
         attempt.present.verdict.selectedVerdict !== null;
 
@@ -256,72 +360,77 @@ export function useInvestigationController({
 
     const activateCabinetEvidence = useCallback(
         (evidenceId: string) => {
-            const activeTool = attempt.present.activeTool;
-            const isPinned = pinnedEvidenceIds.has(evidenceId);
-            const isInspected = inspectedEvidenceIds.has(evidenceId);
-
-            if (activeTool === "inspect") {
-                openEvidencePreview(evidenceId);
-                return;
-            }
-
-            if (activeTool === "pin") {
-                if (isPinned) {
-                    dispatch({
-                        type: "PIN_EVIDENCE",
-                        evidenceId,
-                        nowIso: new Date().toISOString(),
-                    });
-                    return;
-                }
-
-                if (!isInspected) {
-                    openEvidencePreview(evidenceId);
-                    return;
-                }
-
-                dispatch({
-                    type: "PIN_EVIDENCE",
-                    evidenceId,
-                    nowIso: new Date().toISOString(),
-                });
-            }
+            openEvidencePreview(evidenceId);
         },
-        [
-            attempt.present.activeTool,
-            inspectedEvidenceIds,
-            openEvidencePreview,
-            pinnedEvidenceIds,
-        ],
+        [openEvidencePreview],
     );
 
     const activatePinnedBoardEvidence = useCallback(
-        (pinnedEvidenceId: string, evidenceId: string) => {
-            const activeTool = attempt.present.activeTool;
-
-            if (activeTool === "inspect") {
-                openEvidencePreview(evidenceId);
-                return;
-            }
-
-            if (activeTool === "pin") {
-                dispatch({
-                    type: "PIN_EVIDENCE",
-                    evidenceId,
-                    nowIso: new Date().toISOString(),
-                });
-                return;
-            }
-
+        (pinnedEvidenceId: string, _evidenceId: string) => {
             selectPinnedEvidence(pinnedEvidenceId);
         },
-        [attempt.present.activeTool, openEvidencePreview, selectPinnedEvidence],
+        [selectPinnedEvidence],
     );
 
     const setActiveTool = useCallback((toolId: InvestigationToolId) => {
         dispatch({
             type: "SET_ACTIVE_TOOL",
             toolId,
+        });
+    }, []);
+
+    const updateDraftFinding = useCallback((patch: DraftFindingPatch) => {
+        dispatch({
+            type: "UPDATE_DRAFT_FINDING",
+            patch,
+        });
+    }, []);
+
+    const selectFindingType = useCallback((findingTypeId: FindingTypeId) => {
+        dispatch({
+            type: "UPDATE_DRAFT_FINDING",
+            patch: {
+                findingTypeId,
+            },
+        });
+    }, []);
+
+    const toggleDraftEvidenceLink = useCallback(
+        (evidenceId: string) => {
+            if (draftLinkedEvidenceIds.has(evidenceId)) {
+                dispatch({
+                    type: "REMOVE_EVIDENCE_FROM_DRAFT",
+                    evidenceId,
+                });
+                return;
+            }
+
+            dispatch({
+                type: "ATTACH_EVIDENCE_TO_DRAFT",
+                evidenceId,
+            });
+        },
+        [draftLinkedEvidenceIds],
+    );
+
+    const fileDraftFinding = useCallback(() => {
+        dispatch({
+            type: "FILE_FINDING",
+            nowIso: new Date().toISOString(),
+        });
+    }, []);
+
+    const removeFiledFinding = useCallback((filedFindingId: string) => {
+        dispatch({
+            type: "REMOVE_FILED_FINDING",
+            filedFindingId,
+        });
+    }, []);
+
+    const selectVerdict = useCallback((verdict: ReleaseVerdict) => {
+        dispatch({
+            type: "SELECT_VERDICT",
+            verdict,
         });
     }, []);
 
@@ -348,7 +457,11 @@ export function useInvestigationController({
         attempt,
         evidenceItems,
         pinnedBoardItems,
+        linkableEvidenceItems,
+        findingTypeItems,
+        filedFindingItems,
         previewEvidenceCard,
+        canFileDraftFinding,
         canUndo,
         canRedo,
         canReset,
@@ -362,6 +475,12 @@ export function useInvestigationController({
         unpinEvidence,
         selectPinnedEvidence,
         setActiveTool,
+        updateDraftFinding,
+        selectFindingType,
+        toggleDraftEvidenceLink,
+        fileDraftFinding,
+        removeFiledFinding,
+        selectVerdict,
         undoLastAction,
         redoLastAction,
         resetAttempt,

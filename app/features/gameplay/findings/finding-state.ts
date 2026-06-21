@@ -1,32 +1,55 @@
-import type {
-    FindingSeverity,
-    RiskCategory,
-} from "../../content/content-types";
+import type { FindingSeverity } from "../../content/content-types";
+import type { FindingTypeId } from "./finding-types";
 
 /**
- * Editable finding draft shown in the notebook.
+ * Draft finding currently being assembled in the casework notebook.
+ *
+ * The player shows reasoning by linking support and applying a generic risk
+ * stamp. Optional text is available, but required free writing is avoided so the
+ * game does not become a written assignment.
  */
 export interface DraftFinding {
-    category: RiskCategory | null;
+    findingTypeId: FindingTypeId | null;
     severity: FindingSeverity | null;
-    summary: string;
+
+    /**
+     * Individual evidence cards linked directly to this draft.
+     */
     linkedEvidenceIds: string[];
+
+    /**
+     * Reserved for Evidence Threads in Build 001F-B.
+     *
+     * A thread will let the player link a whole connected evidence group without
+     * selecting every evidence card one-by-one.
+     */
+    linkedThreadIds: string[];
+
+    /**
+     * Optional note written by the player. This is not required and should not
+     * become the main grading anchor.
+     */
+    optionalNote: string;
 }
 
 /**
- * Filed finding submitted by the player during a ticket attempt.
+ * Filed finding saved into the notebook.
+ *
+ * Filed findings snapshot linked evidence IDs at filing time so future scoring
+ * stays stable even if the board changes later.
  */
 export interface FiledFinding {
     filedFindingId: string;
-    category: RiskCategory;
+    findingTypeId: FindingTypeId;
     severity: FindingSeverity;
-    summary: string;
     linkedEvidenceIds: string[];
+    linkedThreadIds: string[];
+    optionalNote: string;
     createdAt: string;
 }
 
 /**
- * Runtime finding state for a ticket attempt.
+ * Notebook finding state for one ticket attempt.
  */
 export interface FindingState {
     draft: DraftFinding;
@@ -38,15 +61,16 @@ export interface FindingState {
  */
 export function createEmptyDraftFinding(): DraftFinding {
     return {
-        category: null,
+        findingTypeId: null,
         severity: null,
-        summary: "",
         linkedEvidenceIds: [],
+        linkedThreadIds: [],
+        optionalNote: "",
     };
 }
 
 /**
- * Creates the initial finding state for a ticket attempt.
+ * Creates the initial notebook state for a ticket attempt.
  */
 export function createInitialFindingState(): FindingState {
     return {

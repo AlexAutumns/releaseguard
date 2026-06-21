@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 
+import { GameNotificationStack } from "../../components/game-notifications/GameNotificationStack";
 import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -11,15 +12,21 @@ import type {
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
+import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
+import { cn } from "../../lib/cn";
 import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
 import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
+import { FiledFindingCard } from "./FiledFindingCard";
+import { FindingDraftForm } from "./FindingDraftForm";
 import { InvestigationHud } from "./InvestigationHud";
 import { InvestigationRail } from "./InvestigationRail";
 import { InvestigationToolRack } from "./InvestigationToolRack";
 import { InvestigationWorkspaceShell } from "./InvestigationWorkspaceShell";
-import { useInvestigationController } from "./useInvestigationController";
-import { GameNotificationStack } from "../../components/game-notifications/GameNotificationStack";
-import { cn } from "../../lib/cn";
+import {
+    useInvestigationController,
+    type InvestigationController,
+} from "./useInvestigationController";
+import { VerdictDrawer } from "./VerdictDrawer";
 
 export interface InvestigationScreenProps {
     requestedShiftId: string;
@@ -30,11 +37,13 @@ export interface InvestigationScreenProps {
     familyReference?: FamilyReferenceDefinition;
 }
 
+type CaseworkTab = "new-finding" | "filed" | "verdict";
+
 /**
  * Active investigation workspace for one ticket.
  *
- * This wrapper handles missing content safely. The real workspace is split into
- * a child component so hooks only run when shift and ticket content exist.
+ * This wrapper safely handles missing content. The real gameplay workspace only
+ * renders after a valid shift and ticket are available.
  */
 export function InvestigationScreen({
     requestedShiftId,
@@ -46,7 +55,7 @@ export function InvestigationScreen({
         return (
             <InvestigationWorkspaceShell>
                 <div className="flex h-full min-h-0 flex-col">
-                    <div className="mb-2 flex shrink-0 justify-between rounded-2xl border border-rg-border bg-rg-surface/92 p-3">
+                    <div className="mb-2 flex shrink-0 justify-between border border-rg-border bg-rg-surface/92 p-3">
                         <Link
                             className={buttonClassName({
                                 variant: "secondary",
@@ -77,21 +86,22 @@ interface InvestigationWorkspaceProps {
 }
 
 /**
- * Real investigation workspace for a valid ticket.
+ * Valid ticket investigation workspace.
  *
- * Layout state stays local here. Gameplay state is delegated to the
- * investigation controller and reducer.
+ * The layout keeps only two major work zones open at once:
+ * - Files + Board while investigating evidence.
+ * - Board + Casework while filing findings.
  */
 function InvestigationWorkspace({
     shift,
     ticket,
 }: InvestigationWorkspaceProps) {
     const [isCabinetOpen, setIsCabinetOpen] = useState(true);
-    const [isCaseworkOpen, setIsCaseworkOpen] = useState(true);
+    const [isCaseworkOpen, setIsCaseworkOpen] = useState(false);
+    const [activeCaseworkTab, setActiveCaseworkTab] =
+        useState<CaseworkTab>("new-finding");
 
     const controller = useInvestigationController({ shift, ticket });
-
-    const activeTool = controller.attempt.present.activeTool;
 
     const previewIsPinned = controller.previewEvidenceCard
         ? controller.evidenceItems.some(
@@ -100,6 +110,17 @@ function InvestigationWorkspace({
                   item.isPinned,
           )
         : false;
+
+    const openCabinet = () => {
+        setIsCabinetOpen(true);
+        setIsCaseworkOpen(false);
+    };
+
+    const openCasework = (tab: CaseworkTab = activeCaseworkTab) => {
+        setActiveCaseworkTab(tab);
+        setIsCaseworkOpen(true);
+        setIsCabinetOpen(false);
+    };
 
     return (
         <InvestigationWorkspaceShell>
@@ -114,177 +135,18 @@ function InvestigationWorkspace({
             <div
                 className="grid min-h-0 flex-1 gap-2"
                 style={{
-                    gridTemplateColumns: `${isCabinetOpen ? "minmax(270px, 330px)" : "48px"} minmax(0, 1fr) ${
-                        isCaseworkOpen ? "minmax(300px, 360px)" : "48px"
-                    }`,
+                    gridTemplateColumns: getWorkspaceGridColumns({
+                        isCabinetOpen,
+                        isCaseworkOpen,
+                    }),
                 }}
             >
                 {isCabinetOpen ? (
-                    <Panel
-                        className="h-full min-h-0"
-                        padding="sm"
-                        tone="folder"
-                    >
-                        <div className="flex h-full min-h-0 flex-col">
-                            <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                    <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
-                                        Cabinet
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-text">
-                                            Evidence Files
-                                        </h2>
-                                        <Badge tone="cork">
-                                            {ticket.evidenceCards.length}
-                                        </Badge>
-                                    </div>
-                                </div>
-
-                                <Button
-                                    aria-label="Collapse evidence cabinet"
-                                    className="h-8 w-8 shrink-0 px-0"
-                                    onClick={() => setIsCabinetOpen(false)}
-                                    size="sm"
-                                    title="Collapse evidence cabinet"
-                                    variant="secondary"
-                                >
-                                    ←
-                                </Button>
-                            </div>
-
-                            <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                                <div className="grid gap-2 pb-2">
-                                    {controller.evidenceItems.map(
-                                        (
-                                            {
-                                                evidenceCard,
-                                                isInspected,
-                                                isPinned,
-                                            },
-                                            index,
-                                        ) => (
-                                            <article
-                                                className={cn(
-                                                    "min-w-0 rounded-2xl border border-rg-border-soft bg-rg-surface/78 p-3 shadow-lg shadow-black/20 transition hover:border-rg-amber/60",
-                                                    activeTool === "select"
-                                                        ? "cursor-default"
-                                                        : "cursor-pointer hover:bg-rg-surface-raised",
-                                                )}
-                                                key={evidenceCard.id}
-                                                onClick={() =>
-                                                    controller.activateCabinetEvidence(
-                                                        evidenceCard.id,
-                                                    )
-                                                }
-                                                onKeyDown={(event) => {
-                                                    if (
-                                                        event.key === "Enter" ||
-                                                        event.key === " "
-                                                    ) {
-                                                        event.preventDefault();
-                                                        controller.activateCabinetEvidence(
-                                                            evidenceCard.id,
-                                                        );
-                                                    }
-                                                }}
-                                                role="button"
-                                                tabIndex={0}
-                                                title={
-                                                    activeTool === "inspect"
-                                                        ? "Inspect this evidence file."
-                                                        : activeTool === "pin"
-                                                          ? isPinned
-                                                              ? "This evidence is already pinned."
-                                                              : isInspected
-                                                                ? "Pin this evidence to the board."
-                                                                : "Inspect this evidence before pinning it."
-                                                          : "Use Inspect or Pin to act on this cabinet file."
-                                                }
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="min-w-0">
-                                                        <p className="truncate font-bold text-rg-text">
-                                                            {evidenceCard.title}
-                                                        </p>
-                                                        <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-rg-faint">
-                                                            {
-                                                                evidenceCard.source
-                                                            }
-                                                        </p>
-                                                    </div>
-
-                                                    <Badge
-                                                        tone={
-                                                            isPinned
-                                                                ? "success"
-                                                                : isInspected
-                                                                  ? "warning"
-                                                                  : "neutral"
-                                                        }
-                                                    >
-                                                        {isPinned
-                                                            ? "pinned"
-                                                            : isInspected
-                                                              ? "seen"
-                                                              : `#${index + 1}`}
-                                                    </Badge>
-                                                </div>
-
-                                                <p className="mt-3 line-clamp-3 break-words text-xs leading-5 text-rg-muted">
-                                                    {evidenceCard.body}
-                                                </p>
-
-                                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                                    <Button
-                                                        className="h-8"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            controller.openEvidencePreview(
-                                                                evidenceCard.id,
-                                                            );
-                                                        }}
-                                                        size="sm"
-                                                        title="Inspect evidence file"
-                                                        variant="secondary"
-                                                    >
-                                                        ⌕ Inspect
-                                                    </Button>
-
-                                                    <Button
-                                                        className="h-8"
-                                                        disabled={
-                                                            !isInspected ||
-                                                            isPinned
-                                                        }
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            controller.pinEvidence(
-                                                                evidenceCard.id,
-                                                            );
-                                                        }}
-                                                        size="sm"
-                                                        title={
-                                                            isPinned
-                                                                ? "This evidence is already pinned."
-                                                                : isInspected
-                                                                  ? "Pin this evidence to the board."
-                                                                  : "Inspect this evidence before pinning it."
-                                                        }
-                                                        variant="ghost"
-                                                    >
-                                                        {isPinned
-                                                            ? "Pinned"
-                                                            : "◇ Pin"}
-                                                    </Button>
-                                                </div>
-                                            </article>
-                                        ),
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </Panel>
+                    <EvidenceCabinetPanel
+                        controller={controller}
+                        onCollapse={() => setIsCabinetOpen(false)}
+                        ticket={ticket}
+                    />
                 ) : (
                     <InvestigationRail
                         icon="▤"
@@ -294,219 +156,20 @@ function InvestigationWorkspace({
                                 {ticket.evidenceCards.length}
                             </Badge>
                         }
-                        onOpen={() => setIsCabinetOpen(true)}
+                        onOpen={openCabinet}
                         side="left"
                     />
                 )}
 
-                <Panel className="h-full min-h-0" padding="sm" tone="cork">
-                    <div className="flex h-full min-h-0 flex-col">
-                        <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
-                            <div className="min-w-0">
-                                <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-paper-strong">
-                                    Main Board
-                                </p>
-                                <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-paper-strong">
-                                    Investigation Board
-                                </h2>
-                            </div>
-
-                            <div className="flex shrink-0 flex-wrap gap-1.5">
-                                <Badge tone="warning">{activeTool}</Badge>
-                                <Badge tone="neutral">
-                                    {
-                                        controller.attempt.present.board
-                                            .pinnedEvidence.length
-                                    }{" "}
-                                    pinned
-                                </Badge>
-                                <Badge tone="neutral">
-                                    {
-                                        controller.attempt.present.board
-                                            .connections.length
-                                    }{" "}
-                                    links
-                                </Badge>
-                            </div>
-                        </div>
-
-                        <div className="relative min-h-0 flex-1 overflow-hidden rounded-3xl border border-rg-paper-strong/28 bg-rg-cork-dark/20">
-                            <div className="absolute inset-0 opacity-70">
-                                <div className="rg-cork-grain h-full w-full" />
-                            </div>
-
-                            <div className="relative z-10 h-full min-h-[420px] p-2">
-                                <div
-                                    className="relative h-full overflow-hidden rounded-2xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20"
-                                    onClick={() =>
-                                        controller.selectPinnedEvidence(null)
-                                    }
-                                >
-                                    {controller.pinnedBoardItems.length ===
-                                    0 ? (
-                                        <div className="grid h-full place-items-center">
-                                            <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
-                                                <p className="text-base font-black text-rg-paper-strong">
-                                                    Board is clear
-                                                </p>
-                                                <p className="mt-2 text-xs leading-5 text-rg-paper-strong/75">
-                                                    Inspect evidence from the
-                                                    cabinet, then pin selected
-                                                    clues here. Fold side panels
-                                                    to gain more board space.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        controller.pinnedBoardItems.map(
-                                            (item) => (
-                                                <BoardPinnedEvidenceCard
-                                                    activeTool={activeTool}
-                                                    evidenceCard={
-                                                        item.evidenceCard
-                                                    }
-                                                    isSelected={item.isSelected}
-                                                    key={
-                                                        item.pinnedEvidence
-                                                            .pinnedEvidenceId
-                                                    }
-                                                    onActivate={() =>
-                                                        controller.activatePinnedBoardEvidence(
-                                                            item.pinnedEvidence
-                                                                .pinnedEvidenceId,
-                                                            item.evidenceCard
-                                                                .id,
-                                                        )
-                                                    }
-                                                    onInspect={() =>
-                                                        controller.openEvidencePreview(
-                                                            item.evidenceCard
-                                                                .id,
-                                                        )
-                                                    }
-                                                    onUnpin={() =>
-                                                        controller.unpinEvidence(
-                                                            item.pinnedEvidence
-                                                                .pinnedEvidenceId,
-                                                        )
-                                                    }
-                                                    pinnedEvidence={
-                                                        item.pinnedEvidence
-                                                    }
-                                                />
-                                            ),
-                                        )
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Panel>
+                <InvestigationBoardPanel controller={controller} />
 
                 {isCaseworkOpen ? (
-                    <div className="grid h-full min-h-0 grid-rows-[1fr_auto] gap-2">
-                        <Panel className="min-h-0" padding="sm" tone="notepad">
-                            <div className="flex h-full min-h-0 flex-col">
-                                <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-folder-dark">
-                                            Notebook
-                                        </p>
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-paper-ink">
-                                                Findings
-                                            </h2>
-                                            <Badge tone="neutral">
-                                                {
-                                                    controller.attempt.present
-                                                        .findings.filedFindings
-                                                        .length
-                                                }{" "}
-                                                filed
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        aria-label="Collapse casework drawer"
-                                        className="h-8 w-8 shrink-0 px-0"
-                                        onClick={() => setIsCaseworkOpen(false)}
-                                        size="sm"
-                                        title="Collapse notebook and verdict drawer"
-                                        variant="secondary"
-                                    >
-                                        →
-                                    </Button>
-                                </div>
-
-                                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pl-7 pr-1">
-                                    <EmptyState
-                                        description="Filed findings will appear here once evidence has been reviewed."
-                                        title="No findings filed"
-                                        tone="paper"
-                                    />
-                                </div>
-                            </div>
-                        </Panel>
-
-                        <Panel padding="sm" tone="danger">
-                            <div className="mb-2 flex items-center justify-between gap-2">
-                                <div>
-                                    <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
-                                        Verdict
-                                    </p>
-                                    <h2 className="text-lg font-black tracking-[-0.04em] text-rg-text">
-                                        Stamp Drawer
-                                    </h2>
-                                </div>
-
-                                <Badge tone="danger">
-                                    {controller.attempt.present.verdict
-                                        .selectedVerdict ?? "Unstamped"}
-                                </Badge>
-                            </div>
-
-                            <p className="text-xs leading-5 text-rg-muted">
-                                Hold the verdict until the board and findings
-                                support the decision.
-                            </p>
-
-                            <div className="mt-3 grid grid-cols-2 gap-1.5">
-                                <Button
-                                    disabled
-                                    className="h-8"
-                                    size="sm"
-                                    variant="secondary"
-                                >
-                                    Ship
-                                </Button>
-                                <Button
-                                    disabled
-                                    className="h-8"
-                                    size="sm"
-                                    variant="secondary"
-                                >
-                                    Watch
-                                </Button>
-                                <Button
-                                    disabled
-                                    className="h-8"
-                                    size="sm"
-                                    variant="secondary"
-                                >
-                                    Hold
-                                </Button>
-                                <Button
-                                    disabled
-                                    className="h-8"
-                                    size="sm"
-                                    variant="stamp"
-                                >
-                                    Block
-                                </Button>
-                            </div>
-                        </Panel>
-                    </div>
+                    <CaseworkPanel
+                        activeTab={activeCaseworkTab}
+                        controller={controller}
+                        onCollapse={() => setIsCaseworkOpen(false)}
+                        onSelectTab={setActiveCaseworkTab}
+                    />
                 ) : (
                     <InvestigationRail
                         icon="▥"
@@ -519,7 +182,7 @@ function InvestigationWorkspace({
                                 }
                             </Badge>
                         }
-                        onOpen={() => setIsCaseworkOpen(true)}
+                        onOpen={() => openCasework("new-finding")}
                         side="right"
                     />
                 )}
@@ -544,5 +207,464 @@ function InvestigationWorkspace({
                 onPinToBoard={controller.pinPreviewEvidence}
             />
         </InvestigationWorkspaceShell>
+    );
+}
+
+interface WorkspaceGridColumnsInput {
+    isCabinetOpen: boolean;
+    isCaseworkOpen: boolean;
+}
+
+/**
+ * Returns the workspace grid columns for the current drawer state.
+ */
+function getWorkspaceGridColumns({
+    isCabinetOpen,
+    isCaseworkOpen,
+}: WorkspaceGridColumnsInput): string {
+    const cabinetColumn = isCabinetOpen ? "minmax(320px, 390px)" : "48px";
+    const caseworkColumn = isCaseworkOpen ? "minmax(420px, 520px)" : "48px";
+
+    return `${cabinetColumn} minmax(0, 1fr) ${caseworkColumn}`;
+}
+
+interface EvidenceCabinetPanelProps {
+    controller: InvestigationController;
+    onCollapse: () => void;
+    ticket: ReleaseTicketDefinition;
+}
+
+/**
+ * Evidence file cabinet.
+ *
+ * Evidence actions remain direct object actions:
+ * - inspect from the evidence card,
+ * - pin from the evidence card after inspection.
+ */
+function EvidenceCabinetPanel({
+    controller,
+    onCollapse,
+    ticket,
+}: EvidenceCabinetPanelProps) {
+    return (
+        <Panel className="h-full min-h-0" padding="sm" tone="folder">
+            <div className="flex h-full min-h-0 flex-col">
+                <div className="mb-3 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
+                    <div className="min-w-0">
+                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
+                            Evidence
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-text">
+                                File Drawer
+                            </h2>
+
+                            <Badge tone="cork">
+                                {ticket.evidenceCards.length}
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <Button
+                        aria-label="Collapse evidence cabinet"
+                        className="h-8 w-8 shrink-0 px-0"
+                        onClick={onCollapse}
+                        size="sm"
+                        title="Collapse evidence cabinet"
+                        variant="secondary"
+                    >
+                        ←
+                    </Button>
+                </div>
+
+                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                    <div className="grid gap-2 pb-2">
+                        {controller.evidenceItems.map(
+                            (
+                                { evidenceCard, isInspected, isPinned },
+                                index,
+                            ) => (
+                                <article
+                                    className="min-w-0 cursor-pointer rounded-2xl border border-rg-border-soft bg-rg-surface/78 p-3 shadow-lg shadow-black/20 transition hover:border-rg-amber/60 hover:bg-rg-surface-raised"
+                                    key={evidenceCard.id}
+                                    onClick={() =>
+                                        controller.activateCabinetEvidence(
+                                            evidenceCard.id,
+                                        )
+                                    }
+                                    title="Inspect this evidence file."
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <p className="line-clamp-2 font-bold leading-5 text-rg-text">
+                                                {evidenceCard.title}
+                                            </p>
+
+                                            <p className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-rg-muted">
+                                                {evidenceCard.source}
+                                            </p>
+                                        </div>
+
+                                        <Badge
+                                            tone={
+                                                isPinned
+                                                    ? "success"
+                                                    : isInspected
+                                                      ? "warning"
+                                                      : "neutral"
+                                            }
+                                        >
+                                            {isPinned
+                                                ? "Pinned"
+                                                : isInspected
+                                                  ? "Seen"
+                                                  : `#${index + 1}`}
+                                        </Badge>
+                                    </div>
+
+                                    <p className="mt-3 line-clamp-2 break-words text-xs leading-5 text-rg-muted">
+                                        {evidenceCard.body}
+                                    </p>
+
+                                    <div
+                                        className="mt-3 flex flex-wrap gap-1.5"
+                                        onClick={(event) =>
+                                            event.stopPropagation()
+                                        }
+                                    >
+                                        <Button
+                                            className="h-8"
+                                            onClick={() =>
+                                                controller.openEvidencePreview(
+                                                    evidenceCard.id,
+                                                )
+                                            }
+                                            size="sm"
+                                            title="Inspect evidence file"
+                                            variant="secondary"
+                                        >
+                                            ⌕ Inspect
+                                        </Button>
+
+                                        <Button
+                                            className="h-8"
+                                            disabled={!isInspected || isPinned}
+                                            onClick={() =>
+                                                controller.pinEvidence(
+                                                    evidenceCard.id,
+                                                )
+                                            }
+                                            size="sm"
+                                            title={
+                                                isPinned
+                                                    ? "This evidence is already pinned."
+                                                    : isInspected
+                                                      ? "Pin this evidence to the board."
+                                                      : "Inspect this evidence before pinning it."
+                                            }
+                                            variant="ghost"
+                                        >
+                                            {isPinned
+                                                ? "Pinned"
+                                                : "◇ Pin to Board"}
+                                        </Button>
+                                    </div>
+                                </article>
+                            ),
+                        )}
+                    </div>
+                </div>
+            </div>
+        </Panel>
+    );
+}
+
+interface InvestigationBoardPanelProps {
+    controller: InvestigationController;
+}
+
+/**
+ * Main cork board area.
+ */
+function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
+    const activeTool = controller.attempt.present.activeTool;
+
+    return (
+        <Panel className="h-full min-h-0" padding="sm" tone="cork">
+            <div className="flex h-full min-h-0 flex-col">
+                <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-paper-strong">
+                            Main Board
+                        </p>
+
+                        <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-paper-strong">
+                            Investigation Board
+                        </h2>
+                    </div>
+
+                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                        <Badge tone="warning">{activeTool}</Badge>
+                        <Badge tone="neutral">
+                            {
+                                controller.attempt.present.board.pinnedEvidence
+                                    .length
+                            }{" "}
+                            pinned
+                        </Badge>
+                        <Badge tone="neutral">
+                            {
+                                controller.attempt.present.board.connections
+                                    .length
+                            }{" "}
+                            links
+                        </Badge>
+                    </div>
+                </div>
+
+                <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-rg-paper-strong/28 bg-rg-cork-dark/20">
+                    <div className="absolute inset-0 opacity-70">
+                        <div className="rg-cork-grain h-full w-full" />
+                    </div>
+
+                    <div className="relative z-10 h-full min-h-[420px] p-2">
+                        <div
+                            className="relative h-full overflow-hidden rounded-xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20"
+                            onClick={() =>
+                                controller.selectPinnedEvidence(null)
+                            }
+                        >
+                            {controller.pinnedBoardItems.length === 0 ? (
+                                <div className="grid h-full place-items-center">
+                                    <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
+                                        <p className="text-base font-black text-rg-paper-strong">
+                                            Board is clear
+                                        </p>
+
+                                        <p className="mt-2 text-xs leading-5 text-rg-paper-strong/75">
+                                            Inspect evidence from the file
+                                            drawer, then pin useful clues here.
+                                            Open Casework when you are ready to
+                                            file a supported finding.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                controller.pinnedBoardItems.map((item) => (
+                                    <BoardPinnedEvidenceCard
+                                        activeTool={activeTool}
+                                        evidenceCard={item.evidenceCard}
+                                        isSelected={item.isSelected}
+                                        key={
+                                            item.pinnedEvidence.pinnedEvidenceId
+                                        }
+                                        onActivate={() =>
+                                            controller.activatePinnedBoardEvidence(
+                                                item.pinnedEvidence
+                                                    .pinnedEvidenceId,
+                                                item.evidenceCard.id,
+                                            )
+                                        }
+                                        onInspect={() =>
+                                            controller.openEvidencePreview(
+                                                item.evidenceCard.id,
+                                            )
+                                        }
+                                        onUnpin={() =>
+                                            controller.unpinEvidence(
+                                                item.pinnedEvidence
+                                                    .pinnedEvidenceId,
+                                            )
+                                        }
+                                        pinnedEvidence={item.pinnedEvidence}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Panel>
+    );
+}
+
+interface CaseworkPanelProps {
+    activeTab: CaseworkTab;
+    controller: InvestigationController;
+    onCollapse: () => void;
+    onSelectTab: (tab: CaseworkTab) => void;
+}
+
+/**
+ * Casework panel for structured findings and verdict selection.
+ */
+function CaseworkPanel({
+    activeTab,
+    controller,
+    onCollapse,
+    onSelectTab,
+}: CaseworkPanelProps) {
+    return (
+        <Panel className="h-full min-h-0" padding="sm" tone="notepad">
+            <div className="flex h-full min-h-0 flex-col">
+                <div className="mb-2 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
+                    <div className="min-w-0">
+                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
+                            Casework
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-text">
+                                Notebook
+                            </h2>
+
+                            <Badge tone="neutral">
+                                {
+                                    controller.attempt.present.findings
+                                        .filedFindings.length
+                                }{" "}
+                                filed
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <Button
+                        aria-label="Collapse casework drawer"
+                        className="h-8 w-8 shrink-0 px-0"
+                        onClick={onCollapse}
+                        size="sm"
+                        title="Collapse casework drawer"
+                        variant="secondary"
+                    >
+                        →
+                    </Button>
+                </div>
+
+                <div className="mb-3 grid shrink-0 grid-cols-3 gap-1">
+                    <CaseworkTabButton
+                        isActive={activeTab === "new-finding"}
+                        label="New"
+                        onClick={() => onSelectTab("new-finding")}
+                    />
+
+                    <CaseworkTabButton
+                        isActive={activeTab === "filed"}
+                        label={`Filed (${controller.filedFindingItems.length})`}
+                        onClick={() => onSelectTab("filed")}
+                    />
+
+                    <CaseworkTabButton
+                        isActive={activeTab === "verdict"}
+                        label="Verdict"
+                        onClick={() => onSelectTab("verdict")}
+                    />
+                </div>
+
+                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                    {activeTab === "new-finding" && (
+                        <FindingDraftForm
+                            canFileFinding={controller.canFileDraftFinding}
+                            draft={controller.attempt.present.findings.draft}
+                            findingTypeItems={controller.findingTypeItems}
+                            linkableEvidenceItems={
+                                controller.linkableEvidenceItems
+                            }
+                            onDraftChange={controller.updateDraftFinding}
+                            onFileFinding={controller.fileDraftFinding}
+                            onSelectFindingType={controller.selectFindingType}
+                            onToggleEvidence={
+                                controller.toggleDraftEvidenceLink
+                            }
+                        />
+                    )}
+
+                    {activeTab === "filed" && (
+                        <FiledCasework controller={controller} />
+                    )}
+
+                    {activeTab === "verdict" && (
+                        <VerdictDrawer
+                            filedFindingCount={
+                                controller.attempt.present.findings
+                                    .filedFindings.length
+                            }
+                            onSelectVerdict={controller.selectVerdict}
+                            selectedVerdict={
+                                controller.attempt.present.verdict
+                                    .selectedVerdict
+                            }
+                        />
+                    )}
+                </div>
+            </div>
+        </Panel>
+    );
+}
+
+interface CaseworkTabButtonProps {
+    isActive: boolean;
+    label: string;
+    onClick: () => void;
+}
+
+/**
+ * Simple casework tab button.
+ */
+function CaseworkTabButton({
+    isActive,
+    label,
+    onClick,
+}: CaseworkTabButtonProps) {
+    return (
+        <button
+            className={cn(
+                "rounded-xl border px-2 py-2 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber",
+                isActive
+                    ? "border-rg-amber bg-rg-amber text-rg-night"
+                    : "border-rg-border-soft bg-rg-surface-raised text-rg-text hover:border-rg-amber/70 hover:bg-rg-surface-soft",
+            )}
+            onClick={onClick}
+            type="button"
+        >
+            {label}
+        </button>
+    );
+}
+
+interface FiledCaseworkProps {
+    controller: InvestigationController;
+}
+
+/**
+ * Filed findings tab.
+ */
+function FiledCasework({ controller }: FiledCaseworkProps) {
+    if (controller.filedFindingItems.length === 0) {
+        return (
+            <EmptyState
+                description="File a supported finding from the New tab."
+                title="No filed findings"
+                tone="paper"
+            />
+        );
+    }
+
+    return (
+        <div className="grid gap-2 pb-2">
+            {controller.filedFindingItems.map((item) => (
+                <FiledFindingCard
+                    filedFinding={item.filedFinding}
+                    findingType={item.findingType}
+                    key={item.filedFinding.filedFindingId}
+                    linkedEvidenceCards={item.linkedEvidenceCards}
+                    onRemove={() =>
+                        controller.removeFiledFinding(
+                            item.filedFinding.filedFindingId,
+                        )
+                    }
+                />
+            ))}
+        </div>
     );
 }

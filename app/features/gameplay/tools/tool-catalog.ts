@@ -4,47 +4,33 @@ import type {
 } from "./tool-types";
 
 /**
- * Ordered catalog of tools shown in the investigation tool rack.
+ * Ordered catalog of board tools shown in the investigation tool rack.
  *
- * Tool metadata lives here so the UI can render from one source of truth instead
- * of hard-coding toolbar buttons in the screen.
+ * Inspect and Pin are excluded because they are direct evidence actions, not
+ * global board modes.
  */
 export const investigationToolCatalog: InvestigationToolDefinition[] = [
     {
         id: "select",
         icon: "⌖",
         label: "Select",
-        description: "Click pinned board cards to select them.",
-        isMvpEnabled: true,
-    },
-    {
-        id: "inspect",
-        icon: "⌕",
-        label: "Inspect",
-        description:
-            "Click evidence files or pinned cards to open the inspection modal.",
-        isMvpEnabled: true,
-    },
-    {
-        id: "pin",
-        icon: "◇",
-        label: "Pin",
-        description:
-            "Click inspected cabinet files to pin them. Uninspected files open inspection first.",
+        description: "Select pinned evidence cards and inspect the board.",
         isMvpEnabled: true,
     },
     {
         id: "connect",
-        icon: "⛓",
+        icon: "╱",
         label: "Connect",
-        description: "Connect two pinned clues.",
+        description:
+            "Create and cut colored Evidence Threads between pinned clues. Coming next.",
         isMvpEnabled: false,
     },
     {
-        id: "move",
+        id: "arrange",
         icon: "✥",
-        label: "Move",
-        description: "Move pinned clues around the board.",
+        label: "Arrange",
+        description:
+            "Reposition pinned clues on the board. Planned for a later build.",
         isMvpEnabled: false,
     },
 ];

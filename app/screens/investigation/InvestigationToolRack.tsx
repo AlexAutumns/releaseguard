@@ -15,10 +15,10 @@ export interface InvestigationToolRackProps {
 }
 
 /**
- * Bottom tool rack for the investigation workspace.
+ * Bottom board tool rack.
  *
- * The rack controls the active investigation tool and attempt-level actions.
- * Temporary warnings are shown in the game notification stack instead of here.
+ * The rack only contains board modes. Evidence actions such as Inspect and Pin
+ * live directly on the evidence objects they affect.
  */
 export function InvestigationToolRack({
     activeTool,
@@ -35,12 +35,12 @@ export function InvestigationToolRack({
     );
 
     return (
-        <footer className="mt-2 shrink-0 rounded-2xl border border-rg-border bg-rg-surface/94 px-2.5 py-2 shadow-xl shadow-black/35">
+        <footer className="mt-2 shrink-0 border border-rg-border bg-rg-surface/95 px-3 py-2 shadow-xl shadow-black/35">
             <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex shrink-0 items-center gap-3">
                     <div>
-                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
-                            Tool Rack
+                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.22em] text-rg-amber">
+                            Board Tools
                         </p>
 
                         <p className="text-xs text-rg-muted">
@@ -48,10 +48,6 @@ export function InvestigationToolRack({
                             <span className="font-bold text-rg-text">
                                 {activeToolDefinition?.label}
                             </span>
-                        </p>
-
-                        <p className="mt-0.5 max-w-xs text-[0.7rem] leading-4 text-rg-faint">
-                            {activeToolDefinition?.description}
                         </p>
                     </div>
                 </div>
@@ -69,21 +65,18 @@ export function InvestigationToolRack({
                                     isActive
                                         ? "border-rg-amber bg-rg-amber text-rg-night shadow-lg shadow-rg-amber/10"
                                         : "border-rg-border-soft bg-rg-surface-raised text-rg-text hover:border-rg-amber/70 hover:bg-rg-surface-soft",
-                                    !tool.isMvpEnabled && "opacity-55",
+                                    !tool.isMvpEnabled &&
+                                        "cursor-not-allowed opacity-45",
                                 )}
                                 disabled={!tool.isMvpEnabled}
                                 key={tool.id}
                                 onClick={() => onSelectTool(tool.id)}
-                                title={
-                                    tool.isMvpEnabled
-                                        ? tool.description
-                                        : `${tool.description} This tool will activate in a later build.`
-                                }
+                                title={tool.description}
                                 type="button"
                             >
                                 <span
-                                    className="font-mono text-base"
                                     aria-hidden="true"
+                                    className="font-mono text-base"
                                 >
                                     {tool.icon}
                                 </span>
