@@ -1,49 +1,46 @@
+import type { EvidenceThreadColorId } from "../board/board-state";
 import type { FindingSeverity } from "../../content/content-types";
 import type { FindingTypeId } from "./finding-types";
 
 /**
  * Draft finding currently being assembled in the casework notebook.
  *
- * The player shows reasoning by linking support and applying a generic risk
- * stamp. Optional text is available, but required free writing is avoided so the
- * game does not become a written assignment.
+ * The draft may link direct evidence and/or live board threads. Draft thread
+ * links are allowed to be live because the player is still editing.
  */
 export interface DraftFinding {
     findingTypeId: FindingTypeId | null;
     severity: FindingSeverity | null;
-
-    /**
-     * Individual evidence cards linked directly to this draft.
-     */
     linkedEvidenceIds: string[];
-
-    /**
-     * Reserved for Evidence Threads in Build 001F-B.
-     *
-     * A thread will let the player link a whole connected evidence group without
-     * selecting every evidence card one-by-one.
-     */
-    linkedThreadIds: string[];
-
-    /**
-     * Optional note written by the player. This is not required and should not
-     * become the main grading anchor.
-     */
+    linkedThreadIds: EvidenceThreadColorId[];
     optionalNote: string;
+}
+
+/**
+ * Snapshot of a linked Evidence Thread at the moment a finding is filed.
+ *
+ * This prevents filed findings from silently changing when the player later
+ * cuts, recreates, or reuses the same colored thread.
+ */
+export interface FiledThreadSupportSnapshot {
+    threadId: EvidenceThreadColorId;
+    evidenceIds: string[];
+    segmentCount: number;
 }
 
 /**
  * Filed finding saved into the notebook.
  *
- * Filed findings snapshot linked evidence IDs at filing time so future scoring
- * stays stable even if the board changes later.
+ * Filed findings snapshot linked thread evidence at filing time. Direct
+ * evidence IDs are also copied so scoring/reporting stays stable.
  */
 export interface FiledFinding {
     filedFindingId: string;
     findingTypeId: FindingTypeId;
     severity: FindingSeverity;
     linkedEvidenceIds: string[];
-    linkedThreadIds: string[];
+    linkedThreadIds: EvidenceThreadColorId[];
+    linkedThreadSnapshots: FiledThreadSupportSnapshot[];
     optionalNote: string;
     createdAt: string;
 }

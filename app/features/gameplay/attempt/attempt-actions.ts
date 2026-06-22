@@ -83,6 +83,14 @@ export type TicketAttemptAction =
           evidenceId: string;
       }
     | {
+          type: "ATTACH_THREAD_TO_DRAFT";
+          threadId: EvidenceThreadColorId;
+      }
+    | {
+          type: "REMOVE_THREAD_FROM_DRAFT";
+          threadId: EvidenceThreadColorId;
+      }
+    | {
           type: "FILE_FINDING";
           nowIso: string;
       }

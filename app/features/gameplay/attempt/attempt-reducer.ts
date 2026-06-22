@@ -10,9 +10,11 @@ import type { BoardState } from "../board/board-state";
 import { markEvidenceInspected } from "../evidence/evidence-rules";
 import {
     attachEvidenceToDraft,
+    attachThreadToDraft,
     fileDraftFinding,
     removeEvidenceFromDraft,
     removeFiledFinding,
+    removeThreadFromDraft,
     updateDraftFinding,
 } from "../findings/finding-rules";
 import type { GameplayRuleIssue, RuleResult } from "../shared/rule-result";
@@ -25,6 +27,7 @@ import {
 import type { TicketAttemptAction } from "./attempt-actions";
 import type { TicketAttemptState } from "./attempt-state";
 import type { ConnectInteractionState } from "../connect/connect-state";
+import type { FiledThreadSupportSnapshot } from "../findings/finding-state";
 
 /**
  * Returns the same attempt state with a new gameplay issue.
@@ -85,6 +88,45 @@ function clearConnectAnchor(
         ...connectInteraction,
         pendingAnchorPinnedEvidenceId: null,
     };
+}
+
+/**
+ * Creates thread evidence snapshots from the current board state.
+ *
+ * This is used when filing a finding so filed casework remains stable even if
+ * the player later cuts or recreates the same colored thread.
+ */
+function createThreadSupportSnapshots(
+    present: TicketAttemptState["present"],
+): FiledThreadSupportSnapshot[] {
+    return present.findings.draft.linkedThreadIds.map((threadId) => {
+        const threadConnections = present.board.connections.filter(
+            (connection) => connection.threadId === threadId,
+        );
+
+        const pinnedEvidenceIds = new Set<string>();
+
+        threadConnections.forEach((connection) => {
+            pinnedEvidenceIds.add(connection.fromPinnedEvidenceId);
+            pinnedEvidenceIds.add(connection.toPinnedEvidenceId);
+        });
+
+        const evidenceIds = Array.from(pinnedEvidenceIds)
+            .map((pinnedEvidenceId) => {
+                const pinnedEvidence = present.board.pinnedEvidence.find(
+                    (item) => item.pinnedEvidenceId === pinnedEvidenceId,
+                );
+
+                return pinnedEvidence?.evidenceId;
+            })
+            .filter((evidenceId): evidenceId is string => Boolean(evidenceId));
+
+        return {
+            threadId,
+            evidenceIds,
+            segmentCount: threadConnections.length,
+        };
+    });
 }
 
 /**
@@ -389,10 +431,44 @@ export function ticketAttemptReducer(
                 lastIssue: null,
             };
 
+        case "ATTACH_THREAD_TO_DRAFT": {
+            const result = attachThreadToDraft(
+                state.present.findings,
+                action.threadId,
+            );
+
+            if (!result.ok) {
+                return withIssue(state, result.issue);
+            }
+
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    findings: result.value,
+                },
+                lastIssue: null,
+            };
+        }
+
+        case "REMOVE_THREAD_FROM_DRAFT":
+            return {
+                ...state,
+                present: {
+                    ...state.present,
+                    findings: removeThreadFromDraft(
+                        state.present.findings,
+                        action.threadId,
+                    ),
+                },
+                lastIssue: null,
+            };
+
         case "FILE_FINDING": {
             const result = fileDraftFinding(
                 state.present.findings,
                 action.nowIso,
+                createThreadSupportSnapshots(state.present),
             );
 
             if (!result.ok) {

@@ -9,7 +9,10 @@ import { LinkedEvidencePicker } from "./LinkedEvidencePicker";
 import type {
     FindingTypeItem,
     LinkableEvidenceItem,
+    LinkableThreadItem,
 } from "./useInvestigationController";
+import type { EvidenceThreadColorId } from "../../features/gameplay/board/board-state";
+import { LinkedThreadPicker } from "./LinkedThreadPicker";
 
 const severityOptions: { id: FindingSeverity; label: string }[] = [
     { id: "low", label: "Low" },
@@ -23,10 +26,12 @@ export interface FindingDraftFormProps {
     draft: DraftFinding;
     findingTypeItems: FindingTypeItem[];
     linkableEvidenceItems: LinkableEvidenceItem[];
+    linkableThreadItems: LinkableThreadItem[];
     onDraftChange: (patch: DraftFindingPatch) => void;
     onFileFinding: () => void;
     onSelectFindingType: (findingTypeId: FindingTypeId) => void;
     onToggleEvidence: (evidenceId: string) => void;
+    onToggleThread: (threadId: EvidenceThreadColorId) => void;
 }
 
 /**
@@ -40,10 +45,12 @@ export function FindingDraftForm({
     draft,
     findingTypeItems,
     linkableEvidenceItems,
+    linkableThreadItems,
     onDraftChange,
     onFileFinding,
     onSelectFindingType,
     onToggleEvidence,
+    onToggleThread,
 }: FindingDraftFormProps) {
     const hasEvidenceSupport =
         draft.linkedEvidenceIds.length > 0 || draft.linkedThreadIds.length > 0;
@@ -76,14 +83,21 @@ export function FindingDraftForm({
             </div>
 
             <FormSection
-                helper="Choose the evidence that supports this finding. Threads will be added in the next build."
+                helper="Choose direct evidence or link a whole board thread as support."
                 required
                 title="Evidence Support"
             >
-                <LinkedEvidencePicker
-                    items={linkableEvidenceItems}
-                    onToggleEvidence={onToggleEvidence}
-                />
+                <div className="grid gap-3">
+                    <LinkedEvidencePicker
+                        items={linkableEvidenceItems}
+                        onToggleEvidence={onToggleEvidence}
+                    />
+
+                    <LinkedThreadPicker
+                        items={linkableThreadItems}
+                        onToggleThread={onToggleThread}
+                    />
+                </div>
             </FormSection>
 
             <FormSection

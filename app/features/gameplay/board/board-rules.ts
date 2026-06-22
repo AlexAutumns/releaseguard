@@ -11,46 +11,55 @@ import type {
 /**
  * Temporary visible spawn area before real Pan/Viewport exists.
  *
- * This keeps cards in a readable cluster instead of spreading them too far
- * across the whole board.
+ * The bounds are intentionally a little conservative because the pinned cards
+ * are large. Keeping spawn candidates away from the board edges reduces cases
+ * where a card appears clipped, crowded, or hard to interact with.
  */
 const visibleSpawnBounds = {
     minXPercent: 23,
     maxXPercent: 77,
-    minYPercent: 29,
-    maxYPercent: 69,
+    minYPercent: 28,
+    maxYPercent: 71,
 };
 
 /**
- * Minimum spacing between card centers in board percentage units.
+ * Approximate pinned card footprint in board percentage units.
  *
- * Moderate spacing: enough to avoid overlap, but not so much that cards become
- * scattered and hard to scan quickly.
+ * The board stores card positions as center points, but the visual cards are
+ * rectangles. This footprint is used to reject spawn positions that would cause
+ * destructive overlap with an existing pinned card.
  */
-const minimumSpawnSpacing = {
-    xPercent: 23,
-    yPercent: 24,
+const pinnedCardFootprint = {
+    widthPercent: 24,
+    heightPercent: 35,
 };
 
-const randomSpawnCandidateCount = 24;
+/**
+ * Candidate count for secondary seeded positions.
+ *
+ * Preferred slots are tried first, then seeded candidates provide variation if
+ * the board already has unusual card placement.
+ */
+const randomSpawnCandidateCount = 36;
 
 /**
- * Sensible fallback positions with vertical variety.
+ * Preferred spawn slots for the current desktop-first board.
+ *
+ * These slots form a loose readable grid for the first several pinned cards.
+ * They are not a final Arrange/Pan replacement; they are a safety net so basic
+ * board play does not become destructive before Arrange exists.
  */
-const fallbackSpawnCandidatePositions: BoardPosition[] = [
-    { xPercent: 30, yPercent: 34 },
-    { xPercent: 52, yPercent: 31 },
-    { xPercent: 72, yPercent: 37 },
+const preferredSpawnCandidatePositions: BoardPosition[] = [
+    { xPercent: 29, yPercent: 32 },
+    { xPercent: 54, yPercent: 31 },
+    { xPercent: 76, yPercent: 34 },
 
-    { xPercent: 26, yPercent: 52 },
-    { xPercent: 50, yPercent: 50 },
-    { xPercent: 72, yPercent: 55 },
+    { xPercent: 28, yPercent: 69 },
+    { xPercent: 53, yPercent: 70 },
+    { xPercent: 76, yPercent: 67 },
 
-    { xPercent: 35, yPercent: 66 },
-    { xPercent: 58, yPercent: 65 },
-
-    { xPercent: 40, yPercent: 40 },
-    { xPercent: 63, yPercent: 43 },
+    { xPercent: 41, yPercent: 50 },
+    { xPercent: 65, yPercent: 51 },
 ];
 
 /**
@@ -124,34 +133,67 @@ function createPinnedEvidenceId(state: BoardState, evidenceId: string): string {
 }
 
 /**
- * Checks whether two candidate card centers are too close for comfortable use.
+ * Checks whether two card rectangles would destructively overlap.
+ *
+ * Board positions are card centers. This function treats each card as an
+ * approximate rectangle and rejects positions where both horizontal and vertical
+ * overlap are significant.
  */
-function isPositionTooClose(
+function hasDestructiveCardOverlap(
     leftPosition: BoardPosition,
     rightPosition: BoardPosition,
 ): boolean {
+    const deltaX = Math.abs(leftPosition.xPercent - rightPosition.xPercent);
+    const deltaY = Math.abs(leftPosition.yPercent - rightPosition.yPercent);
+
     return (
-        Math.abs(leftPosition.xPercent - rightPosition.xPercent) <
-            minimumSpawnSpacing.xPercent &&
-        Math.abs(leftPosition.yPercent - rightPosition.yPercent) <
-            minimumSpawnSpacing.yPercent
+        deltaX < pinnedCardFootprint.widthPercent &&
+        deltaY < pinnedCardFootprint.heightPercent
     );
 }
 
 /**
- * Scores a candidate by its closest distance to existing pinned cards.
+ * Returns an approximate overlap penalty between two card footprints.
  *
- * Higher is better.
+ * Zero means the candidate does not overlap the existing card footprint.
+ * Higher values mean more destructive overlap.
+ */
+function getCardOverlapPenalty(
+    leftPosition: BoardPosition,
+    rightPosition: BoardPosition,
+): number {
+    const deltaX = Math.abs(leftPosition.xPercent - rightPosition.xPercent);
+    const deltaY = Math.abs(leftPosition.yPercent - rightPosition.yPercent);
+
+    const overlapX = Math.max(0, pinnedCardFootprint.widthPercent - deltaX);
+    const overlapY = Math.max(0, pinnedCardFootprint.heightPercent - deltaY);
+
+    return overlapX * overlapY;
+}
+
+/**
+ * Scores a candidate by overlap safety first, then distance from existing cards.
+ *
+ * Higher is better. Non-overlapping candidates are strongly preferred. If every
+ * available candidate overlaps, the reducer still chooses the least destructive
+ * option instead of falling back to a random-looking collision.
  */
 function scoreCandidatePosition(
     candidatePosition: BoardPosition,
     existingPositions: readonly BoardPosition[],
 ): number {
     if (existingPositions.length === 0) {
-        return Number.POSITIVE_INFINITY;
+        return 0;
     }
 
-    return Math.min(
+    const overlapPenalty = existingPositions.reduce(
+        (totalPenalty, existingPosition) =>
+            totalPenalty +
+            getCardOverlapPenalty(candidatePosition, existingPosition),
+        0,
+    );
+
+    const closestDistance = Math.min(
         ...existingPositions.map((existingPosition) => {
             const deltaX =
                 candidatePosition.xPercent - existingPosition.xPercent;
@@ -161,13 +203,25 @@ function scoreCandidatePosition(
             return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         }),
     );
+
+    const centerDeltaX = candidatePosition.xPercent - 50;
+    const centerDeltaY = candidatePosition.yPercent - 50;
+    const distanceFromBoardCenter = Math.sqrt(
+        centerDeltaX * centerDeltaX + centerDeltaY * centerDeltaY,
+    );
+
+    if (overlapPenalty > 0) {
+        return -10_000 - overlapPenalty * 100 + closestDistance;
+    }
+
+    return closestDistance - distanceFromBoardCenter * 0.04;
 }
 
 /**
  * Creates seeded spawn candidates inside the visible board area.
  *
- * Repinning uses pinnedAt in the seed, so the same evidence can land somewhere
- * slightly different after being unpinned and pinned again.
+ * Preferred slots come first so early board layouts are readable and stable.
+ * Seeded candidates are still included as backups for unusual board states.
  */
 function createSpawnCandidatePositions(seedValue: string): BoardPosition[] {
     const random = createSeededRandom(seedValue);
@@ -185,7 +239,7 @@ function createSpawnCandidatePositions(seedValue: string): BoardPosition[] {
         });
     }
 
-    return [...randomCandidates, ...fallbackSpawnCandidatePositions];
+    return [...preferredSpawnCandidatePositions, ...randomCandidates];
 }
 
 /**
@@ -204,15 +258,17 @@ function getDefaultPinnedPosition(
         `${evidenceId}:${pinnedAt}:${state.pinnedEvidence.length}`,
     );
 
-    const comfortableCandidates = candidates.filter((candidatePosition) =>
+    const nonOverlappingCandidates = candidates.filter((candidatePosition) =>
         existingPositions.every(
             (existingPosition) =>
-                !isPositionTooClose(candidatePosition, existingPosition),
+                !hasDestructiveCardOverlap(candidatePosition, existingPosition),
         ),
     );
 
     const candidatesToScore =
-        comfortableCandidates.length > 0 ? comfortableCandidates : candidates;
+        nonOverlappingCandidates.length > 0
+            ? nonOverlappingCandidates
+            : candidates;
 
     return candidatesToScore.reduce((bestPosition, candidatePosition) => {
         const bestScore = scoreCandidatePosition(

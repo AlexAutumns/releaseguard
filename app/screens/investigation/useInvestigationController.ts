@@ -14,9 +14,10 @@ import type {
     EvidenceThreadColorId,
     PinnedEvidence,
 } from "../../features/gameplay/board/board-state";
-import type {
-    ConnectInteractionState,
-    ConnectToolMode,
+import {
+    evidenceThreadColorCatalog,
+    type ConnectInteractionState,
+    type ConnectToolMode,
 } from "../../features/gameplay/connect/connect-state";
 import type { DraftFindingPatch } from "../../features/gameplay/findings/finding-rules";
 import type { FiledFinding } from "../../features/gameplay/findings/finding-state";
@@ -62,6 +63,23 @@ export interface LinkableEvidenceItem {
 }
 
 /**
+ * Shared display model for one non-empty Evidence Thread.
+ */
+export interface ThreadSupportItem {
+    threadId: EvidenceThreadColorId;
+    label: string;
+    segmentCount: number;
+    evidenceCards: EvidenceCardDefinition[];
+}
+
+/**
+ * Evidence Thread support item shown in the New Finding casework tab.
+ */
+export interface LinkableThreadItem extends ThreadSupportItem {
+    isLinkedToDraft: boolean;
+}
+
+/**
  * Generic finding stamp option shown in the New Finding casework tab.
  */
 export interface FindingTypeItem {
@@ -76,6 +94,7 @@ export interface FiledFindingItem {
     filedFinding: FiledFinding;
     findingType?: FindingTypeDefinition;
     linkedEvidenceCards: EvidenceCardDefinition[];
+    linkedThreadItems: ThreadSupportItem[];
 }
 
 /**
@@ -92,6 +111,7 @@ export interface InvestigationController {
     linkableEvidenceItems: LinkableEvidenceItem[];
     findingTypeItems: FindingTypeItem[];
     filedFindingItems: FiledFindingItem[];
+    linkableThreadItems: LinkableThreadItem[];
     pendingConnectAnchorLabel: string | null;
     previewEvidenceCard?: EvidenceCardDefinition;
     canFileDraftFinding: boolean;
@@ -123,6 +143,7 @@ export interface InvestigationController {
     undoLastAction: () => void;
     redoLastAction: () => void;
     resetAttempt: () => void;
+    toggleDraftThreadLink: (threadId: EvidenceThreadColorId) => void;
     notifications: ReturnType<typeof useGameNotifications>["notifications"];
     dismissNotification: ReturnType<
         typeof useGameNotifications
@@ -187,6 +208,10 @@ export function useInvestigationController({
         return new Set(attempt.present.findings.draft.linkedEvidenceIds);
     }, [attempt.present.findings.draft.linkedEvidenceIds]);
 
+    const draftLinkedThreadIds = useMemo(() => {
+        return new Set(attempt.present.findings.draft.linkedThreadIds);
+    }, [attempt.present.findings.draft.linkedThreadIds]);
+
     const evidenceItems = useMemo<EvidenceCabinetItem[]>(() => {
         return ticket.evidenceCards.map((evidenceCard) => ({
             evidenceCard,
@@ -243,6 +268,69 @@ export function useInvestigationController({
             }));
     }, [draftLinkedEvidenceIds, evidenceItems]);
 
+    const threadSupportItems = useMemo<ThreadSupportItem[]>(() => {
+        return evidenceThreadColorCatalog
+            .map((threadColor) => {
+                const threadConnections =
+                    attempt.present.board.connections.filter(
+                        (connection) => connection.threadId === threadColor.id,
+                    );
+
+                const pinnedEvidenceIdsInThread = new Set<string>();
+
+                threadConnections.forEach((connection) => {
+                    pinnedEvidenceIdsInThread.add(
+                        connection.fromPinnedEvidenceId,
+                    );
+                    pinnedEvidenceIdsInThread.add(
+                        connection.toPinnedEvidenceId,
+                    );
+                });
+
+                const evidenceCards = Array.from(pinnedEvidenceIdsInThread)
+                    .map((pinnedEvidenceId) => {
+                        const pinnedEvidence =
+                            attempt.present.board.pinnedEvidence.find(
+                                (item) =>
+                                    item.pinnedEvidenceId === pinnedEvidenceId,
+                            );
+
+                        if (!pinnedEvidence) {
+                            return undefined;
+                        }
+
+                        return evidenceById.get(pinnedEvidence.evidenceId);
+                    })
+                    .filter(
+                        (
+                            evidenceCard,
+                        ): evidenceCard is EvidenceCardDefinition =>
+                            Boolean(evidenceCard),
+                    );
+
+                return {
+                    threadId: threadColor.id,
+                    label: threadColor.label,
+                    segmentCount: threadConnections.length,
+                    evidenceCards,
+                };
+            })
+            .filter((item) => item.segmentCount > 0);
+    }, [
+        attempt.present.board.connections,
+        attempt.present.board.pinnedEvidence,
+        evidenceById,
+    ]);
+
+    const linkableThreadItems = useMemo<LinkableThreadItem[]>(() => {
+        return threadSupportItems.map((threadSupportItem) => ({
+            ...threadSupportItem,
+            isLinkedToDraft: draftLinkedThreadIds.has(
+                threadSupportItem.threadId,
+            ),
+        }));
+    }, [draftLinkedThreadIds, threadSupportItems]);
+
     const findingTypeItems = useMemo<FindingTypeItem[]>(() => {
         return findingTypeCatalog.map((findingType) => ({
             findingType,
@@ -261,6 +349,28 @@ export function useInvestigationController({
                     (evidenceCard): evidenceCard is EvidenceCardDefinition =>
                         Boolean(evidenceCard),
                 ),
+            linkedThreadItems: filedFinding.linkedThreadSnapshots.map(
+                (threadSnapshot) => {
+                    const threadColor = evidenceThreadColorCatalog.find(
+                        (threadColorItem) =>
+                            threadColorItem.id === threadSnapshot.threadId,
+                    );
+
+                    return {
+                        threadId: threadSnapshot.threadId,
+                        label: threadColor?.label ?? threadSnapshot.threadId,
+                        segmentCount: threadSnapshot.segmentCount,
+                        evidenceCards: threadSnapshot.evidenceIds
+                            .map((evidenceId) => evidenceById.get(evidenceId))
+                            .filter(
+                                (
+                                    evidenceCard,
+                                ): evidenceCard is EvidenceCardDefinition =>
+                                    Boolean(evidenceCard),
+                            ),
+                    };
+                },
+            ),
         }));
     }, [attempt.present.findings.filedFindings, evidenceById]);
 
@@ -377,12 +487,75 @@ export function useInvestigationController({
         setPreviewEvidenceId(null);
     }, [pinnedEvidenceIds, previewEvidenceCard]);
 
-    const unpinEvidence = useCallback((pinnedEvidenceId: string) => {
-        dispatch({
-            type: "UNPIN_EVIDENCE",
-            pinnedEvidenceId,
-        });
-    }, []);
+    const isThreadReferencedByCasework = useCallback(
+        (threadId: EvidenceThreadColorId) => {
+            return (
+                attempt.present.findings.draft.linkedThreadIds.includes(
+                    threadId,
+                ) ||
+                attempt.present.findings.filedFindings.some((filedFinding) =>
+                    filedFinding.linkedThreadSnapshots.some(
+                        (threadSnapshot) =>
+                            threadSnapshot.threadId === threadId,
+                    ),
+                )
+            );
+        },
+        [
+            attempt.present.findings.draft.linkedThreadIds,
+            attempt.present.findings.filedFindings,
+        ],
+    );
+
+    const confirmThreadChangingAction = useCallback(
+        (threadIds: EvidenceThreadColorId[], actionLabel: string) => {
+            const referencedThreadIds = threadIds.filter(
+                isThreadReferencedByCasework,
+            );
+
+            if (referencedThreadIds.length === 0) {
+                return true;
+            }
+
+            return window.confirm(
+                `${actionLabel} will change an evidence thread that is referenced in casework.\n\nFiled findings keep their saved evidence snapshot, but current draft thread support or board context may change.\n\nContinue?`,
+            );
+        },
+        [isThreadReferencedByCasework],
+    );
+
+    const unpinEvidence = useCallback(
+        (pinnedEvidenceId: string) => {
+            const affectedThreadIds = Array.from(
+                new Set(
+                    attempt.present.board.connections
+                        .filter(
+                            (connection) =>
+                                connection.fromPinnedEvidenceId ===
+                                    pinnedEvidenceId ||
+                                connection.toPinnedEvidenceId ===
+                                    pinnedEvidenceId,
+                        )
+                        .map((connection) => connection.threadId),
+                ),
+            );
+
+            if (
+                !confirmThreadChangingAction(
+                    affectedThreadIds,
+                    "Unpinning this evidence",
+                )
+            ) {
+                return;
+            }
+
+            dispatch({
+                type: "UNPIN_EVIDENCE",
+                pinnedEvidenceId,
+            });
+        },
+        [attempt.present.board.connections, confirmThreadChangingAction],
+    );
 
     const selectPinnedEvidence = useCallback(
         (pinnedEvidenceId: string | null) => {
@@ -461,12 +634,30 @@ export function useInvestigationController({
         });
     }, []);
 
-    const cutBoardConnection = useCallback((connectionId: string) => {
-        dispatch({
-            type: "DISCONNECT_CONNECTION",
-            connectionId,
-        });
-    }, []);
+    const cutBoardConnection = useCallback(
+        (connectionId: string) => {
+            const connection = attempt.present.board.connections.find(
+                (boardConnection) =>
+                    boardConnection.connectionId === connectionId,
+            );
+
+            if (
+                connection &&
+                !confirmThreadChangingAction(
+                    [connection.threadId],
+                    "Cutting this string",
+                )
+            ) {
+                return;
+            }
+
+            dispatch({
+                type: "DISCONNECT_CONNECTION",
+                connectionId,
+            });
+        },
+        [attempt.present.board.connections, confirmThreadChangingAction],
+    );
 
     const updateDraftFinding = useCallback((patch: DraftFindingPatch) => {
         dispatch({
@@ -500,6 +691,24 @@ export function useInvestigationController({
             });
         },
         [draftLinkedEvidenceIds],
+    );
+
+    const toggleDraftThreadLink = useCallback(
+        (threadId: EvidenceThreadColorId) => {
+            if (draftLinkedThreadIds.has(threadId)) {
+                dispatch({
+                    type: "REMOVE_THREAD_FROM_DRAFT",
+                    threadId,
+                });
+                return;
+            }
+
+            dispatch({
+                type: "ATTACH_THREAD_TO_DRAFT",
+                threadId,
+            });
+        },
+        [draftLinkedThreadIds],
     );
 
     const fileDraftFinding = useCallback(() => {
@@ -548,6 +757,7 @@ export function useInvestigationController({
         evidenceItems,
         pinnedBoardItems,
         linkableEvidenceItems,
+        linkableThreadItems,
         findingTypeItems,
         filedFindingItems,
         pendingConnectAnchorLabel,
@@ -573,6 +783,7 @@ export function useInvestigationController({
         updateDraftFinding,
         selectFindingType,
         toggleDraftEvidenceLink,
+        toggleDraftThreadLink,
         fileDraftFinding,
         removeFiledFinding,
         selectVerdict,

@@ -4,8 +4,10 @@ import {
     createEmptyDraftFinding,
     type DraftFinding,
     type FiledFinding,
+    type FiledThreadSupportSnapshot,
     type FindingState,
 } from "./finding-state";
+import type { EvidenceThreadColorId } from "../board/board-state";
 
 /**
  * Fields edited directly by the draft finding form.
@@ -89,7 +91,7 @@ export function removeEvidenceFromDraft(
  */
 export function attachThreadToDraft(
     state: FindingState,
-    threadId: string,
+    threadId: EvidenceThreadColorId,
 ): RuleResult<FindingState> {
     if (state.draft.linkedThreadIds.includes(threadId)) {
         return ruleOk(state);
@@ -109,7 +111,7 @@ export function attachThreadToDraft(
  */
 export function removeThreadFromDraft(
     state: FindingState,
-    threadId: string,
+    threadId: EvidenceThreadColorId,
 ): FindingState {
     return {
         ...state,
@@ -145,24 +147,32 @@ function createFiledFindingId(state: FindingState): string {
  * Files the current draft as a submitted case finding.
  *
  * Required:
- * - evidence or thread support,
+ * - direct evidence support or live thread support,
  * - generic finding stamp,
  * - severity.
  *
- * Optional note is not required.
+ * Thread support is snapshotted at filing time so later board edits do not
+ * silently rewrite filed findings.
  */
 export function fileDraftFinding(
     state: FindingState,
     createdAt: string,
+    threadSupportSnapshots: FiledThreadSupportSnapshot[] = [],
 ): RuleResult<FindingState> {
+    const activeThreadSnapshots = threadSupportSnapshots.filter(
+        (threadSnapshot) =>
+            state.draft.linkedThreadIds.includes(threadSnapshot.threadId) &&
+            threadSnapshot.evidenceIds.length > 0,
+    );
+
     const hasEvidenceSupport =
         state.draft.linkedEvidenceIds.length > 0 ||
-        state.draft.linkedThreadIds.length > 0;
+        activeThreadSnapshots.length > 0;
 
     if (!hasEvidenceSupport) {
         return ruleFail(
             "FINDING_SUPPORT_REQUIRED",
-            "Attach evidence support before filing the finding.",
+            "Attach evidence or thread support before filing the finding.",
         );
     }
 
@@ -185,7 +195,14 @@ export function fileDraftFinding(
         findingTypeId: state.draft.findingTypeId,
         severity: state.draft.severity,
         linkedEvidenceIds: [...state.draft.linkedEvidenceIds],
-        linkedThreadIds: [...state.draft.linkedThreadIds],
+        linkedThreadIds: activeThreadSnapshots.map(
+            (threadSnapshot) => threadSnapshot.threadId,
+        ),
+        linkedThreadSnapshots: activeThreadSnapshots.map((threadSnapshot) => ({
+            threadId: threadSnapshot.threadId,
+            evidenceIds: [...threadSnapshot.evidenceIds],
+            segmentCount: threadSnapshot.segmentCount,
+        })),
         optionalNote: state.draft.optionalNote.trim(),
         createdAt,
     };

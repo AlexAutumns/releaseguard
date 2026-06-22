@@ -657,12 +657,14 @@ function CaseworkPanel({
                             linkableEvidenceItems={
                                 controller.linkableEvidenceItems
                             }
+                            linkableThreadItems={controller.linkableThreadItems}
                             onDraftChange={controller.updateDraftFinding}
                             onFileFinding={controller.fileDraftFinding}
                             onSelectFindingType={controller.selectFindingType}
                             onToggleEvidence={
                                 controller.toggleDraftEvidenceLink
                             }
+                            onToggleThread={controller.toggleDraftThreadLink}
                         />
                     )}
 
@@ -745,6 +747,7 @@ function FiledCasework({ controller }: FiledCaseworkProps) {
                     findingType={item.findingType}
                     key={item.filedFinding.filedFindingId}
                     linkedEvidenceCards={item.linkedEvidenceCards}
+                    linkedThreadItems={item.linkedThreadItems}
                     onRemove={() =>
                         controller.removeFiledFinding(
                             item.filedFinding.filedFindingId,

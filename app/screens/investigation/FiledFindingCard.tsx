@@ -3,11 +3,14 @@ import { Button } from "../../components/ui/Button";
 import type { EvidenceCardDefinition } from "../../features/content/content-types";
 import type { FiledFinding } from "../../features/gameplay/findings/finding-state";
 import type { FindingTypeDefinition } from "../../features/gameplay/findings/finding-types";
+import { threadColorVisuals } from "./thread-style";
+import type { ThreadSupportItem } from "./useInvestigationController";
 
 export interface FiledFindingCardProps {
     filedFinding: FiledFinding;
     findingType?: FindingTypeDefinition;
     linkedEvidenceCards: EvidenceCardDefinition[];
+    linkedThreadItems: ThreadSupportItem[];
     onRemove: () => void;
 }
 
@@ -37,6 +40,7 @@ export function FiledFindingCard({
     filedFinding,
     findingType,
     linkedEvidenceCards,
+    linkedThreadItems,
     onRemove,
 }: FiledFindingCardProps) {
     return (
@@ -76,7 +80,7 @@ export function FiledFindingCard({
 
             <div className="rounded-xl border border-rg-border-soft bg-rg-surface-raised p-2">
                 <p className="font-mono text-[0.58rem] font-extrabold uppercase tracking-[0.14em] text-rg-muted">
-                    Evidence Support
+                    Direct Evidence Support
                 </p>
 
                 {linkedEvidenceCards.length > 0 ? (
@@ -92,10 +96,62 @@ export function FiledFindingCard({
                     </ul>
                 ) : (
                     <p className="mt-2 text-xs leading-5 text-rg-muted">
-                        Linked evidence could not be resolved.
+                        No direct evidence linked.
                     </p>
                 )}
             </div>
+
+            {linkedThreadItems.length > 0 && (
+                <div className="mt-2 rounded-xl border border-rg-border-soft bg-rg-surface-raised p-2">
+                    <p className="font-mono text-[0.58rem] font-extrabold uppercase tracking-[0.14em] text-rg-muted">
+                        Linked Evidence Threads
+                    </p>
+
+                    <ul className="mt-2 grid gap-2">
+                        {linkedThreadItems.map((threadItem) => {
+                            const visual =
+                                threadColorVisuals[threadItem.threadId];
+
+                            return (
+                                <li
+                                    className="rounded-lg border border-rg-border-soft bg-rg-surface/70 p-2"
+                                    key={threadItem.threadId}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                aria-hidden="true"
+                                                className="h-2.5 w-2.5 rounded-full border border-black/30"
+                                                style={{
+                                                    backgroundColor:
+                                                        visual.stroke,
+                                                }}
+                                            />
+
+                                            <span className="text-xs font-bold text-rg-text">
+                                                {threadItem.label} Thread
+                                            </span>
+                                        </div>
+
+                                        <Badge tone="neutral">
+                                            {threadItem.segmentCount} seg
+                                        </Badge>
+                                    </div>
+
+                                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-rg-muted">
+                                        {threadItem.evidenceCards
+                                            .map(
+                                                (evidenceCard) =>
+                                                    evidenceCard.title,
+                                            )
+                                            .join(" · ")}
+                                    </p>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
 
             {filedFinding.optionalNote && (
                 <div className="mt-2 rounded-xl border border-rg-border-soft bg-rg-surface-raised p-2">
