@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 import { GameNotificationStack } from "../../components/game-notifications/GameNotificationStack";
 import { Badge } from "../../components/ui/Badge";
@@ -107,6 +107,22 @@ function InvestigationWorkspace({
 
     const controller = useInvestigationController({ shift, ticket });
 
+    const navigate = useNavigate();
+
+    /**
+     * Submits the ticket report through the controller, then routes to the
+     * saved result page only after scoring/storage succeeds.
+     */
+    const submitTicketReport = () => {
+        const submittedAttemptId = controller.submitTicketReport();
+
+        if (!submittedAttemptId) {
+            return;
+        }
+
+        navigate(`/results/ticket/${submittedAttemptId}`);
+    };
+
     const previewIsPinned = controller.previewEvidenceCard
         ? controller.evidenceItems.some(
               (item) =>
@@ -173,6 +189,7 @@ function InvestigationWorkspace({
                         controller={controller}
                         onCollapse={() => setIsCaseworkOpen(false)}
                         onSelectTab={setActiveCaseworkTab}
+                        onSubmitReport={submitTicketReport}
                     />
                 ) : (
                     <InvestigationRail
@@ -581,6 +598,7 @@ interface CaseworkPanelProps {
     controller: InvestigationController;
     onCollapse: () => void;
     onSelectTab: (tab: CaseworkTab) => void;
+    onSubmitReport: () => void;
 }
 
 /**
@@ -591,6 +609,7 @@ function CaseworkPanel({
     controller,
     onCollapse,
     onSelectTab,
+    onSubmitReport,
 }: CaseworkPanelProps) {
     return (
         <Panel className="h-full min-h-0" padding="sm" tone="notepad">
@@ -674,11 +693,13 @@ function CaseworkPanel({
 
                     {activeTab === "verdict" && (
                         <VerdictDrawer
+                            canSubmitReport={controller.canSubmitReport}
                             filedFindingCount={
                                 controller.attempt.present.findings
                                     .filedFindings.length
                             }
                             onSelectVerdict={controller.selectVerdict}
+                            onSubmitReport={onSubmitReport}
                             selectedVerdict={
                                 controller.attempt.present.verdict
                                     .selectedVerdict

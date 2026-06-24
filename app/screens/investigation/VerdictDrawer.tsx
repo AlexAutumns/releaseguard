@@ -31,20 +31,24 @@ const verdictOptions: {
 ];
 
 export interface VerdictDrawerProps {
+    canSubmitReport: boolean;
     filedFindingCount: number;
     onSelectVerdict: (verdict: ReleaseVerdict) => void;
+    onSubmitReport: () => void;
     selectedVerdict: ReleaseVerdict | null;
 }
 
 /**
- * Verdict selection panel.
+ * Verdict selection and ticket report submission panel.
  *
- * Build 001F-A records the selected verdict. Report generation and scoring are
- * added in the next scoring build.
+ * This component only renders readiness and calls submit handlers. Scoring,
+ * storage, and navigation stay outside this drawer.
  */
 export function VerdictDrawer({
+    canSubmitReport,
     filedFindingCount,
     onSelectVerdict,
+    onSubmitReport,
     selectedVerdict,
 }: VerdictDrawerProps) {
     const hasFiledFindings = filedFindingCount > 0;
@@ -71,7 +75,8 @@ export function VerdictDrawer({
 
                 <p className="mt-2 text-xs leading-5 text-rg-muted">
                     The verdict should match the evidence and filed findings.
-                    Scoring will check support quality later.
+                    Submitting will score the filed casework and save a ticket
+                    report locally.
                 </p>
             </div>
 
@@ -128,12 +133,17 @@ export function VerdictDrawer({
 
                 <Button
                     className="mt-3 w-full"
-                    disabled
+                    disabled={!canSubmitReport}
+                    onClick={onSubmitReport}
                     size="sm"
-                    title="Report submission is added in the scoring build."
+                    title={
+                        canSubmitReport
+                            ? "Submit and score this ticket report."
+                            : "File at least one finding and select a verdict before submitting."
+                    }
                     variant={isReadyForReport ? "stamp" : "secondary"}
                 >
-                    {isReadyForReport ? "Ready for Report" : "Report Locked"}
+                    {canSubmitReport ? "Submit Report" : "Report Locked"}
                 </Button>
             </div>
         </section>

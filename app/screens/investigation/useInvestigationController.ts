@@ -28,6 +28,8 @@ import {
     type FindingTypeId,
 } from "../../features/gameplay/findings/finding-types";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
+import { saveTicketScoreResult } from "../../features/gameplay/results/ticket-result-storage";
+import { scoreTicketAttempt } from "../../features/gameplay/scoring/scoring-engine";
 
 export interface UseInvestigationControllerInput {
     shift: ShiftDefinition;
@@ -118,6 +120,8 @@ export interface InvestigationController {
     canUndo: boolean;
     canRedo: boolean;
     canReset: boolean;
+    canSubmitReport: boolean;
+    notifications: ReturnType<typeof useGameNotifications>["notifications"];
     activateCabinetEvidence: (evidenceId: string) => void;
     activatePinnedBoardEvidence: (
         pinnedEvidenceId: string,
@@ -140,11 +144,11 @@ export interface InvestigationController {
     fileDraftFinding: () => void;
     removeFiledFinding: (filedFindingId: string) => void;
     selectVerdict: (verdict: ReleaseVerdict) => void;
+    submitTicketReport: () => string | null;
     undoLastAction: () => void;
     redoLastAction: () => void;
     resetAttempt: () => void;
     toggleDraftThreadLink: (threadId: EvidenceThreadColorId) => void;
-    notifications: ReturnType<typeof useGameNotifications>["notifications"];
     dismissNotification: ReturnType<
         typeof useGameNotifications
     >["dismissNotification"];
@@ -410,6 +414,10 @@ export function useInvestigationController({
         draft.severity,
     );
 
+    const canSubmitReport = Boolean(
+        attempt.present.findings.filedFindings.length > 0 &&
+        attempt.present.verdict.selectedVerdict !== null,
+    );
     const canUndo = attempt.history.past.length > 0;
     const canRedo = attempt.history.future.length > 0;
 
@@ -732,6 +740,55 @@ export function useInvestigationController({
         });
     }, []);
 
+    /**
+     * Scores and saves the current ticket attempt.
+     *
+     * The controller deliberately returns the attempt ID instead of navigating.
+     * This keeps routing inside the screen layer and keeps scoring/storage as
+     * explicit steps.
+     */
+    const submitTicketReport = useCallback(() => {
+        if (!canSubmitReport) {
+            pushNotification({
+                fingerprint: "submit-report:not-ready",
+                message:
+                    "File at least one finding and select a verdict before submitting the report.",
+                title: "Report not ready",
+                tone: "warning",
+            });
+
+            return null;
+        }
+
+        const result = scoreTicketAttempt({
+            attempt,
+            submittedAt: new Date().toISOString(),
+            ticket,
+        });
+
+        const storageResult = saveTicketScoreResult(result);
+
+        if (!storageResult.ok) {
+            pushNotification({
+                fingerprint: "submit-report:storage-failed",
+                message: storageResult.message,
+                title: "Report could not be saved",
+                tone: "danger",
+            });
+
+            return null;
+        }
+
+        pushNotification({
+            fingerprint: `submit-report:saved:${attempt.context.attemptId}`,
+            message: "The ticket report has been scored and saved locally.",
+            title: "Report submitted",
+            tone: "success",
+        });
+
+        return attempt.context.attemptId;
+    }, [attempt, canSubmitReport, pushNotification, ticket]);
+
     const undoLastAction = useCallback(() => {
         dispatch({
             type: "UNDO_LAST_ACTION",
@@ -763,6 +820,7 @@ export function useInvestigationController({
         pendingConnectAnchorLabel,
         previewEvidenceCard,
         canFileDraftFinding,
+        canSubmitReport,
         canUndo,
         canRedo,
         canReset,
@@ -787,6 +845,7 @@ export function useInvestigationController({
         fileDraftFinding,
         removeFiledFinding,
         selectVerdict,
+        submitTicketReport,
         undoLastAction,
         redoLastAction,
         resetAttempt,
