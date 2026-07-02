@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 
-import type { BoardConnection } from "../../features/gameplay/board/board-state";
+import type {
+    BoardConnection,
+    BoardPosition,
+} from "../../features/gameplay/board/board-state";
 import type { ConnectToolMode } from "../../features/gameplay/connect/connect-state";
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
 import type { BoardPinnedEvidenceItem } from "./useInvestigationController";
@@ -11,6 +14,15 @@ export interface BoardThreadLayerProps {
     activeTool: InvestigationToolId;
     connections: BoardConnection[];
     hoveredConnectionId: string | null;
+
+    /**
+     * Temporary board positions used while Arrange dragging is in progress.
+     *
+     * These are UI-only preview positions. The committed board positions still
+     * live in the attempt reducer after the player releases the card.
+     */
+    previewPositionsByPinnedId?: Readonly<Record<string, BoardPosition>>;
+
     pinnedBoardItems: BoardPinnedEvidenceItem[];
     onCutConnection: (connectionId: string) => void;
     onHoveredConnectionChange: (connectionId: string | null) => void;
@@ -20,6 +32,8 @@ interface ThreadEndpoint {
     x: number;
     y: number;
 }
+
+const pinEndpointYOffsetPercent = 14;
 
 /**
  * SVG layer that renders Evidence Thread segments.
@@ -37,18 +51,24 @@ export function BoardThreadLayer({
     activeTool,
     connections,
     hoveredConnectionId,
+    previewPositionsByPinnedId = {},
     pinnedBoardItems,
     onCutConnection,
     onHoveredConnectionChange,
 }: BoardThreadLayerProps) {
     const pinnedPositionById = useMemo(() => {
         return new Map(
-            pinnedBoardItems.map((item) => [
-                item.pinnedEvidence.pinnedEvidenceId,
-                item.pinnedEvidence.position,
-            ]),
+            pinnedBoardItems.map((item) => {
+                const pinnedEvidenceId = item.pinnedEvidence.pinnedEvidenceId;
+
+                return [
+                    pinnedEvidenceId,
+                    previewPositionsByPinnedId[pinnedEvidenceId] ??
+                        item.pinnedEvidence.position,
+                ];
+            }),
         );
-    }, [pinnedBoardItems]);
+    }, [pinnedBoardItems, previewPositionsByPinnedId]);
 
     const connectionGroupsByPair = useMemo(() => {
         const groups = new Map<string, BoardConnection[]>();
@@ -91,14 +111,8 @@ export function BoardThreadLayer({
                     connectionGroupsByPair,
                 );
 
-                const fromPosition = toPinEndpoint(
-                    rawFromPosition,
-                    pairOffsetIndex,
-                );
-                const toPosition = toPinEndpoint(
-                    rawToPosition,
-                    pairOffsetIndex,
-                );
+                const fromPosition = toPinEndpoint(rawFromPosition);
+                const toPosition = toPinEndpoint(rawToPosition);
 
                 const pathData = createSaggingThreadPath(
                     fromPosition,
@@ -195,30 +209,24 @@ function getPairOffsetIndex(
 }
 
 /**
- * Converts card center coordinates into a top-pin endpoint.
+ * Converts a card center coordinate into the approximate top-pin coordinate.
  *
- * The x-coordinate stays aligned with the unpin button. The y-coordinate is
- * raised so the string visually tucks under the pin instead of entering lower
- * through the card title/body area.
+ * This deliberately does not clamp the endpoint to the visible board. If a card
+ * is partly outside the visible area, the string should continue toward the
+ * actual off-screen pin coordinate instead of snapping near the board edge.
  */
-function toPinEndpoint(
-    position: {
-        xPercent: number;
-        yPercent: number;
-    },
-    pairOffsetIndex: number,
-): ThreadEndpoint {
+function toPinEndpoint(position: BoardPosition): ThreadEndpoint {
     return {
-        x: position.xPercent + pairOffsetIndex * 1.1,
-        y: Math.max(4, position.yPercent - 14),
+        x: position.xPercent,
+        y: position.yPercent - pinEndpointYOffsetPercent,
     };
 }
 
 /**
  * Creates a simple gravity-like string path.
  *
- * The string is now slightly thicker and slightly more droopy, without using a
- * dark outline stroke.
+ * The curve offset keeps multiple strings between the same two cards readable
+ * without needing a full graph-routing system.
  */
 function createSaggingThreadPath(
     fromPosition: ThreadEndpoint,

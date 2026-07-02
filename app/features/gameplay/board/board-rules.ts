@@ -43,6 +43,21 @@ const pinnedCardFootprint = {
 const randomSpawnCandidateCount = 36;
 
 /**
+ * Minimum centre-to-centre offset allowed when arranging cards.
+ *
+ * This does not prevent all overlap. It only prevents near-perfect stacking,
+ * which can hide the older card's pin/title area and make accidental unpinning
+ * more likely.
+ */
+const minimumReadableCardOffsetPercent = 9;
+
+/**
+ * Number of small passes used to nudge a moved card away from near-perfect
+ * overlap with existing pinned cards.
+ */
+const readableOverlapResolutionPasses = 3;
+
+/**
  * Preferred spawn slots for the current desktop-first board.
  *
  * These slots form a loose readable grid for the first several pinned cards.
@@ -389,7 +404,88 @@ export function unpinEvidenceFromBoard(
 }
 
 /**
+ * Adjusts a moved card position so it cannot perfectly cover another card.
+ *
+ * Overlap remains allowed because cork-board notes naturally stack. The guard
+ * only nudges the moved card when the centres are so close that one card can
+ * hide the other's pin and title area.
+ */
+function resolveReadableMovePosition(
+    state: BoardState,
+    movedPinnedEvidenceId: string,
+    requestedPosition: BoardPosition,
+): BoardPosition {
+    let resolvedPosition = {
+        xPercent: clampPercent(requestedPosition.xPercent),
+        yPercent: clampPercent(requestedPosition.yPercent),
+    };
+
+    for (let pass = 0; pass < readableOverlapResolutionPasses; pass += 1) {
+        state.pinnedEvidence.forEach((existingPinnedEvidence) => {
+            if (
+                existingPinnedEvidence.pinnedEvidenceId ===
+                movedPinnedEvidenceId
+            ) {
+                return;
+            }
+
+            const existingPosition = existingPinnedEvidence.position;
+            const deltaX =
+                resolvedPosition.xPercent - existingPosition.xPercent;
+            const deltaY =
+                resolvedPosition.yPercent - existingPosition.yPercent;
+
+            const isTooCloseOnX =
+                Math.abs(deltaX) < minimumReadableCardOffsetPercent;
+            const isTooCloseOnY =
+                Math.abs(deltaY) < minimumReadableCardOffsetPercent;
+
+            if (!isTooCloseOnX || !isTooCloseOnY) {
+                return;
+            }
+
+            const xDirection =
+                deltaX === 0
+                    ? getStableNudgeDirection(
+                          movedPinnedEvidenceId,
+                          existingPinnedEvidence.pinnedEvidenceId,
+                      )
+                    : Math.sign(deltaX);
+
+            const yDirection = deltaY === 0 ? 1 : Math.sign(deltaY);
+
+            resolvedPosition = {
+                xPercent: clampPercent(
+                    existingPosition.xPercent +
+                        xDirection * minimumReadableCardOffsetPercent,
+                ),
+                yPercent: clampPercent(
+                    existingPosition.yPercent +
+                        yDirection * minimumReadableCardOffsetPercent,
+                ),
+            };
+        });
+    }
+
+    return resolvedPosition;
+}
+
+/**
+ * Gives exact-overlap nudges a deterministic direction.
+ */
+function getStableNudgeDirection(leftId: string, rightId: string): -1 | 1 {
+    return leftId.localeCompare(rightId) >= 0 ? 1 : -1;
+}
+
+/**
  * Moves a pinned evidence item to a new board position.
+ */
+/**
+ * Moves a pinned evidence item to a new board position.
+ *
+ * The final committed position is lightly guarded against near-perfect overlap
+ * so players can still see enough of stacked cards to recover from a crowded
+ * board.
  */
 export function movePinnedEvidence(
     state: BoardState,
@@ -404,16 +500,19 @@ export function movePinnedEvidence(
         );
     }
 
+    const safePosition = resolveReadableMovePosition(
+        state,
+        pinnedEvidenceId,
+        position,
+    );
+
     return ruleOk({
         ...state,
         pinnedEvidence: state.pinnedEvidence.map((pinnedEvidence) =>
             pinnedEvidence.pinnedEvidenceId === pinnedEvidenceId
                 ? {
                       ...pinnedEvidence,
-                      position: {
-                          xPercent: clampPercent(position.xPercent),
-                          yPercent: clampPercent(position.yPercent),
-                      },
+                      position: safePosition,
                   }
                 : pinnedEvidence,
         ),

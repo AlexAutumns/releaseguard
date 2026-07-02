@@ -12,6 +12,7 @@ import type {
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
+import type { BoardPosition } from "../../features/gameplay/board/board-state";
 import { cn } from "../../lib/cn";
 import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
 import { BoardThreadLayer } from "./BoardThreadLayer";
@@ -38,6 +39,8 @@ export interface InvestigationScreenProps {
 }
 
 type CaseworkTab = "new-finding" | "filed" | "verdict";
+
+type DragPreviewPositionsByPinnedId = Record<string, BoardPosition>;
 
 /**
  * Active investigation workspace for one ticket.
@@ -424,11 +427,42 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
     const [hoveredConnectionId, setHoveredConnectionId] = useState<
         string | null
     >(null);
+    const [dragPreviewPositionsByPinnedId, setDragPreviewPositionsByPinnedId] =
+        useState<DragPreviewPositionsByPinnedId>({});
 
     const hoveredConnection =
         controller.attempt.present.board.connections.find(
             (connection) => connection.connectionId === hoveredConnectionId,
         ) ?? null;
+
+    /**
+     * Stores a temporary card position while Arrange dragging is active.
+     *
+     * This keeps thread strings visually attached during drag without committing
+     * every pointer movement into the reducer or undo history.
+     */
+    const previewPinnedEvidenceMove = (
+        pinnedEvidenceId: string,
+        position: BoardPosition,
+    ) => {
+        setDragPreviewPositionsByPinnedId((currentPositions) => ({
+            ...currentPositions,
+            [pinnedEvidenceId]: position,
+        }));
+    };
+
+    /**
+     * Clears a temporary Arrange preview after the drag is committed or cancelled.
+     */
+    const clearPinnedEvidenceMovePreview = (pinnedEvidenceId: string) => {
+        setDragPreviewPositionsByPinnedId((currentPositions) => {
+            const nextPositions = { ...currentPositions };
+
+            delete nextPositions[pinnedEvidenceId];
+
+            return nextPositions;
+        });
+    };
 
     return (
         <Panel className="h-full min-h-0" padding="sm" tone="cork">
@@ -471,6 +505,7 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                     <div className="relative z-10 h-full min-h-[420px] p-2">
                         <div
                             className="relative h-full overflow-hidden rounded-xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20"
+                            data-investigation-board-surface="true"
                             onClick={() =>
                                 controller.selectPinnedEvidence(null)
                             }
@@ -489,6 +524,9 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                     setHoveredConnectionId
                                 }
                                 pinnedBoardItems={controller.pinnedBoardItems}
+                                previewPositionsByPinnedId={
+                                    dragPreviewPositionsByPinnedId
+                                }
                             />
 
                             {controller.pinnedBoardItems.length === 0 ? (
@@ -572,6 +610,15 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                                 controller.openEvidencePreview(
                                                     item.evidenceCard.id,
                                                 )
+                                            }
+                                            onMove={
+                                                controller.movePinnedEvidence
+                                            }
+                                            onMovePreview={
+                                                previewPinnedEvidenceMove
+                                            }
+                                            onMovePreviewEnd={
+                                                clearPinnedEvidenceMovePreview
                                             }
                                             onUnpin={() =>
                                                 controller.unpinEvidence(
