@@ -11,6 +11,7 @@ import { createTicketAttemptState } from "../../features/gameplay/attempt/attemp
 import { ticketAttemptReducer } from "../../features/gameplay/attempt/attempt-reducer";
 import type { TicketAttemptState } from "../../features/gameplay/attempt/attempt-state";
 import type {
+    BoardPosition,
     EvidenceThreadColorId,
     PinnedEvidence,
 } from "../../features/gameplay/board/board-state";
@@ -133,6 +134,10 @@ export interface InvestigationController {
     pinPreviewEvidence: () => void;
     unpinEvidence: (pinnedEvidenceId: string) => void;
     selectPinnedEvidence: (pinnedEvidenceId: string | null) => void;
+    movePinnedEvidence: (
+        pinnedEvidenceId: string,
+        position: BoardPosition,
+    ) => void;
     setActiveTool: (toolId: InvestigationToolId) => void;
     setConnectThreadId: (threadId: EvidenceThreadColorId) => void;
     setConnectMode: (mode: ConnectToolMode) => void;
@@ -575,6 +580,24 @@ export function useInvestigationController({
         [],
     );
 
+    /**
+     * Dispatches an Arrange movement for a pinned evidence card.
+     *
+     * The UI converts pointer movement into board-space percentages before calling
+     * this method. The reducer clamps the final position and records the movement
+     * as a board change.
+     */
+    const movePinnedEvidence = useCallback(
+        (pinnedEvidenceId: string, position: BoardPosition) => {
+            dispatch({
+                type: "MOVE_PINNED_EVIDENCE",
+                pinnedEvidenceId,
+                position,
+            });
+        },
+        [],
+    );
+
     const activateCabinetEvidence = useCallback(
         (evidenceId: string) => {
             openEvidencePreview(evidenceId);
@@ -833,6 +856,7 @@ export function useInvestigationController({
         pinPreviewEvidence,
         unpinEvidence,
         selectPinnedEvidence,
+        movePinnedEvidence,
         setActiveTool,
         setConnectThreadId,
         setConnectMode,

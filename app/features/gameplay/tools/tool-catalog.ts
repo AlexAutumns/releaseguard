@@ -25,13 +25,16 @@ export const investigationToolCatalog: InvestigationToolDefinition[] = [
             "Create and cut colored Evidence Threads between pinned clues.",
         isMvpEnabled: true,
     },
+    /**
+     * Arrange is enabled for 001H-A so players can reposition pinned evidence
+     * without changing evidence support, findings, verdicts, or scoring.
+     */
     {
         id: "arrange",
         icon: "✥",
         label: "Arrange",
-        description:
-            "Reposition pinned clues on the board. Planned for a later build.",
-        isMvpEnabled: false,
+        description: "Reposition pinned clues on the board.",
+        isMvpEnabled: true,
     },
     {
         id: "pan",
