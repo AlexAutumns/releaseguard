@@ -22,6 +22,20 @@ export interface BoardSpawnBounds {
 }
 
 /**
+ * Percentage bounds describing a preferred board-world spawn area.
+ *
+ * This is usually calculated by the UI from the currently visible board
+ * viewport. The reducer still owns the final spawn decision because it also
+ * needs to account for existing pinned card positions.
+ */
+export interface BoardSpawnBounds {
+    minXPercent: number;
+    maxXPercent: number;
+    minYPercent: number;
+    maxYPercent: number;
+}
+
+/**
  * Fixed Evidence Thread color channels for the MVP.
  *
  * These are intentionally limited. The player uses color as the grouping tool

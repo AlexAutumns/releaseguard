@@ -12,6 +12,7 @@ import { ticketAttemptReducer } from "../../features/gameplay/attempt/attempt-re
 import type { TicketAttemptState } from "../../features/gameplay/attempt/attempt-state";
 import type {
     BoardPosition,
+    BoardSpawnBounds,
     EvidenceThreadColorId,
     PinnedEvidence,
 } from "../../features/gameplay/board/board-state";

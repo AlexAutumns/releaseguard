@@ -36,12 +36,17 @@ export const investigationToolCatalog: InvestigationToolDefinition[] = [
         description: "Reposition pinned clues on the board.",
         isMvpEnabled: true,
     },
+
+    /**
+     * Pan is enabled for 001H-B so players can move the visible board viewport
+     * without changing evidence, findings, verdicts, scoring, or saved results.
+     */
     {
         id: "pan",
-        icon: "✣",
+        icon: "☚",
         label: "Pan",
-        description: "Move around a larger board. Planned for a later build.",
-        isMvpEnabled: false,
+        description: "Drag empty board space to move around the cork board.",
+        isMvpEnabled: true,
     },
 ];
 

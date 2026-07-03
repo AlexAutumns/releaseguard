@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
     BoardConnection,
@@ -33,7 +33,73 @@ interface ThreadEndpoint {
     y: number;
 }
 
-const pinEndpointYOffsetPercent = 14;
+interface PairPathLayout {
+    pairIndex: number;
+    pairCount: number;
+    centeredIndex: number;
+}
+
+/**
+ * Half of the pinned-card overlay height.
+ *
+ * The visual card overlay uses `h-[11.75rem]` in BoardPinnedEvidenceCard.
+ * The top pin sits at the top-center of that overlay, so the string endpoint is
+ * roughly half the overlay height above the card centre.
+ */
+const cardCenterToTopPinOffsetRem = 5.875;
+
+/**
+ * Fallback used before the SVG is measured.
+ *
+ * The measured value replaces this after the first browser layout pass.
+ */
+const fallbackPinEndpointYOffsetPercent = 10.5;
+
+/**
+ * Minimum downward sag so short strings still look physical.
+ */
+const minGravitySagPercent = 2.2;
+
+/**
+ * Maximum base gravity sag before parallel-string layering is added.
+ */
+const maxGravitySagPercent = 5.8;
+
+/**
+ * How quickly string distance contributes to gravity sag.
+ */
+const gravityDistanceDivisor = 22;
+
+/**
+ * Sideways spacing between multiple strings that connect the same two cards.
+ *
+ * This matters most for vertical/diagonal connections.
+ */
+const parallelSideSpacingPercent = 5.4;
+
+/**
+ * Extra downward sag per parallel string lane.
+ *
+ * This matters most for horizontal connections, where sideways separation does
+ * not visually separate the strings enough.
+ */
+const parallelSagSpacingPercent = 2.65;
+
+/**
+ * Cap for added sag from parallel string lanes.
+ */
+const maxAdditionalParallelSagPercent = 8.8;
+
+/**
+ * Small endpoint fan-out so multiple strings do not leave exactly the same
+ * pixel at the pin. Kept small so strings still appear attached to the pin.
+ */
+const endpointFanSpacingPercent = 0.42;
+
+/**
+ * Maximum endpoint fan-out around the pin.
+ */
+const maxEndpointFanPercent = 1.35;
 
 /**
  * SVG layer that renders Evidence Thread segments.
@@ -56,6 +122,59 @@ export function BoardThreadLayer({
     onCutConnection,
     onHoveredConnectionChange,
 }: BoardThreadLayerProps) {
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const [pinEndpointYOffsetPercent, setPinEndpointYOffsetPercent] = useState(
+        fallbackPinEndpointYOffsetPercent,
+    );
+
+    useEffect(() => {
+        const svgElement = svgRef.current;
+
+        if (!svgElement || typeof window === "undefined") {
+            return;
+        }
+
+        /**
+         * Measures the card centre-to-pin offset as a percentage of the current
+         * board world height.
+         *
+         * This is more reliable than a fixed percentage because Pan introduced a
+         * larger board world whose rendered size can change with the viewport.
+         */
+        const updatePinOffset = () => {
+            const svgRect = svgElement.getBoundingClientRect();
+
+            if (svgRect.height <= 0) {
+                return;
+            }
+
+            const rootFontSize = Number.parseFloat(
+                window.getComputedStyle(document.documentElement).fontSize,
+            );
+
+            const safeRootFontSize = Number.isFinite(rootFontSize)
+                ? rootFontSize
+                : 16;
+
+            const offsetPx = cardCenterToTopPinOffsetRem * safeRootFontSize;
+            const nextOffsetPercent = (offsetPx / svgRect.height) * 100;
+
+            setPinEndpointYOffsetPercent(nextOffsetPercent);
+        };
+
+        updatePinOffset();
+
+        const resizeObserver = new ResizeObserver(updatePinOffset);
+        resizeObserver.observe(svgElement);
+
+        window.addEventListener("resize", updatePinOffset);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener("resize", updatePinOffset);
+        };
+    }, []);
+
     const pinnedPositionById = useMemo(() => {
         return new Map(
             pinnedBoardItems.map((item) => {
@@ -90,8 +209,9 @@ export function BoardThreadLayer({
 
     return (
         <svg
-            className="pointer-events-none absolute inset-0 z-[15] h-full w-full"
+            className="pointer-events-none absolute inset-0 z-[15] h-full w-full overflow-visible"
             preserveAspectRatio="none"
+            ref={svgRef}
             viewBox="0 0 100 100"
         >
             {connections.map((connection) => {
@@ -106,18 +226,25 @@ export function BoardThreadLayer({
                     return null;
                 }
 
-                const pairOffsetIndex = getPairOffsetIndex(
+                const pairLayout = getPairPathLayout(
                     connection,
                     connectionGroupsByPair,
                 );
 
-                const fromPosition = toPinEndpoint(rawFromPosition);
-                const toPosition = toPinEndpoint(rawToPosition);
+                const fromPosition = toPinEndpoint(
+                    rawFromPosition,
+                    pinEndpointYOffsetPercent,
+                );
+                const toPosition = toPinEndpoint(
+                    rawToPosition,
+                    pinEndpointYOffsetPercent,
+                );
 
-                const pathData = createSaggingThreadPath(
+                const pathData = createCorkStringPath(
                     fromPosition,
                     toPosition,
-                    pairOffsetIndex,
+                    pairLayout,
+                    connection.connectionId,
                 );
 
                 const isHovered =
@@ -129,10 +256,21 @@ export function BoardThreadLayer({
                         <path
                             d={pathData}
                             fill="none"
+                            stroke="rgba(0,0,0,0.42)"
+                            strokeLinecap="round"
+                            strokeOpacity={isHovered ? 0.42 : 0.26}
+                            strokeWidth={isHovered ? 4.1 : 3.15}
+                            transform="translate(0.18 0.28)"
+                            vectorEffect="non-scaling-stroke"
+                        />
+
+                        <path
+                            d={pathData}
+                            fill="none"
                             stroke={strokeColor}
                             strokeLinecap="round"
                             strokeOpacity={isHovered ? 1 : 0.96}
-                            strokeWidth={isHovered ? 3.1 : 2.35}
+                            strokeWidth={isHovered ? 3.05 : 2.25}
                             vectorEffect="non-scaling-stroke"
                         />
 
@@ -165,7 +303,7 @@ export function BoardThreadLayer({
                                 pointerEvents="stroke"
                                 stroke="transparent"
                                 strokeLinecap="round"
-                                strokeWidth={12}
+                                strokeWidth={14}
                                 vectorEffect="non-scaling-stroke"
                             />
                         )}
@@ -189,33 +327,39 @@ function getConnectionPairKey(connection: BoardConnection): string {
 }
 
 /**
- * Returns a centered offset index for parallel paths between the same pair.
+ * Returns the parallel-string layout information for one connection.
  */
-function getPairOffsetIndex(
+function getPairPathLayout(
     connection: BoardConnection,
     groupsByPair: ReadonlyMap<string, BoardConnection[]>,
-): number {
+): PairPathLayout {
     const group = groupsByPair.get(getConnectionPairKey(connection)) ?? [];
-    const index = group.findIndex(
+    const pairIndex = group.findIndex(
         (groupConnection) =>
             groupConnection.connectionId === connection.connectionId,
     );
 
-    if (index < 0) {
-        return 0;
-    }
+    const safePairIndex = pairIndex < 0 ? 0 : pairIndex;
+    const pairCount = Math.max(1, group.length);
 
-    return index - (group.length - 1) / 2;
+    return {
+        pairIndex: safePairIndex,
+        pairCount,
+        centeredIndex: safePairIndex - (pairCount - 1) / 2,
+    };
 }
 
 /**
- * Converts a card center coordinate into the approximate top-pin coordinate.
+ * Converts a card centre coordinate into the approximate top-pin coordinate.
  *
  * This deliberately does not clamp the endpoint to the visible board. If a card
  * is partly outside the visible area, the string should continue toward the
  * actual off-screen pin coordinate instead of snapping near the board edge.
  */
-function toPinEndpoint(position: BoardPosition): ThreadEndpoint {
+function toPinEndpoint(
+    position: BoardPosition,
+    pinEndpointYOffsetPercent: number,
+): ThreadEndpoint {
     return {
         x: position.xPercent,
         y: position.yPercent - pinEndpointYOffsetPercent,
@@ -223,31 +367,111 @@ function toPinEndpoint(position: BoardPosition): ThreadEndpoint {
 }
 
 /**
- * Creates a simple gravity-like string path.
+ * Creates a cork-board string path between two pin endpoints.
  *
- * The curve offset keeps multiple strings between the same two cards readable
- * without needing a full graph-routing system.
+ * The curve is gravity-first:
+ * - every string sags downward;
+ * - parallel strings get additional downward lanes so they remain visible;
+ * - vertical/diagonal strings also get mild sideways separation.
+ *
+ * This is intentionally not a graph-layout algorithm. It is a small visual
+ * rule for cork-board string readability.
  */
-function createSaggingThreadPath(
+function createCorkStringPath(
     fromPosition: ThreadEndpoint,
     toPosition: ThreadEndpoint,
-    pairOffsetIndex: number,
+    pairLayout: PairPathLayout,
+    connectionId: string,
 ): string {
     const deltaX = toPosition.x - fromPosition.x;
     const deltaY = toPosition.y - fromPosition.y;
     const distance = Math.max(1, Math.sqrt(deltaX * deltaX + deltaY * deltaY));
 
-    const midpointX = (fromPosition.x + toPosition.x) / 2;
-    const midpointY = (fromPosition.y + toPosition.y) / 2;
+    const baseNormalX = -deltaY / distance;
+    const baseNormalY = deltaX / distance;
 
-    const normalX = -deltaY / distance;
-    const normalY = deltaX / distance;
+    const endpointFanOffset = clampNumber(
+        pairLayout.centeredIndex * endpointFanSpacingPercent,
+        -maxEndpointFanPercent,
+        maxEndpointFanPercent,
+    );
 
-    const parallelOffset = pairOffsetIndex * 5.2;
-    const sag = Math.min(9.4, Math.max(4.8, distance / 10.4));
+    const fromX = fromPosition.x + baseNormalX * endpointFanOffset;
+    const fromY = fromPosition.y + baseNormalY * endpointFanOffset;
+    const toX = toPosition.x + baseNormalX * endpointFanOffset;
+    const toY = toPosition.y + baseNormalY * endpointFanOffset;
 
-    const controlX = midpointX + normalX * parallelOffset;
-    const controlY = midpointY + normalY * parallelOffset + sag;
+    const adjustedDeltaX = toX - fromX;
+    const adjustedDeltaY = toY - fromY;
+    const adjustedDistance = Math.max(
+        1,
+        Math.sqrt(
+            adjustedDeltaX * adjustedDeltaX + adjustedDeltaY * adjustedDeltaY,
+        ),
+    );
 
-    return `M ${fromPosition.x} ${fromPosition.y} Q ${controlX} ${controlY} ${toPosition.x} ${toPosition.y}`;
+    const midpointX = (fromX + toX) / 2;
+    const midpointY = (fromY + toY) / 2;
+
+    const normalX = -adjustedDeltaY / adjustedDistance;
+    const normalY = adjustedDeltaX / adjustedDistance;
+
+    const gravitySag = Math.min(
+        maxGravitySagPercent,
+        Math.max(
+            minGravitySagPercent,
+            adjustedDistance / gravityDistanceDivisor,
+        ),
+    );
+
+    const additionalParallelSag = Math.min(
+        maxAdditionalParallelSagPercent,
+        pairLayout.pairIndex * parallelSagSpacingPercent,
+    );
+
+    const sideOffset = pairLayout.centeredIndex * parallelSideSpacingPercent;
+
+    const sideOffsetX = normalX * sideOffset;
+
+    /**
+     * Side offset can move the curve up or down depending on geometry.
+     * Clamp its vertical effect so it can separate paths, but cannot cancel the
+     * physical downward sag.
+     */
+    const sideOffsetY = clampNumber(
+        normalY * sideOffset,
+        -gravitySag * 0.35,
+        gravitySag * 0.55,
+    );
+
+    const stableMicroOffset = getStableMicroOffset(connectionId);
+
+    const controlX = midpointX + sideOffsetX + stableMicroOffset;
+    const controlY = Math.max(
+        midpointY + minGravitySagPercent,
+        midpointY + gravitySag + additionalParallelSag + sideOffsetY,
+    );
+
+    return `M ${fromX} ${fromY} Q ${controlX} ${controlY} ${toX} ${toY}`;
+}
+
+/**
+ * Adds a tiny stable horizontal variation so repeated strings do not look too
+ * mathematically perfect.
+ */
+function getStableMicroOffset(connectionId: string): number {
+    let hash = 0;
+
+    for (let index = 0; index < connectionId.length; index += 1) {
+        hash = (hash + connectionId.charCodeAt(index)) % 7;
+    }
+
+    return (hash - 3) * 0.18;
+}
+
+/**
+ * Clamps a number between a lower and upper bound.
+ */
+function clampNumber(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
 }
