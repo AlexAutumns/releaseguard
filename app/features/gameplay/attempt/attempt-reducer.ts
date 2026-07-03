@@ -304,6 +304,7 @@ export function ticketAttemptReducer(
                 action.evidenceId,
                 state.context.evidenceIds,
                 action.nowIso,
+                action.spawnBounds,
             );
 
             return applyBoardRuleResult(state, result);

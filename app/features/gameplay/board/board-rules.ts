@@ -3,29 +3,41 @@ import { ruleFail, ruleOk, type RuleResult } from "../shared/rule-result";
 import type {
     BoardConnection,
     BoardPosition,
+    BoardSpawnBounds,
     BoardState,
     EvidenceThreadColorId,
     PinnedEvidence,
 } from "./board-state";
 
 /**
- * Temporary visible spawn area before real Pan/Viewport exists.
+ * Fallback spawn bounds for the initial visible viewport.
  *
- * The bounds are intentionally a little conservative because the pinned cards
- * are large. Keeping spawn candidates away from the board edges reduces cases
- * where a card appears clipped, crowded, or hard to interact with.
+ * These are used when the UI cannot provide current viewport bounds, such as
+ * before board refs are available.
  */
-const visibleSpawnBounds = {
-    minXPercent: 23,
-    maxXPercent: 77,
-    minYPercent: 28,
-    maxYPercent: 71,
+const initialViewportSpawnBounds: BoardSpawnBounds = {
+    minXPercent: 14,
+    maxXPercent: 58,
+    minYPercent: 18,
+    maxYPercent: 56,
+};
+
+/**
+ * Backup spawn bounds across the larger pannable board world.
+ *
+ * These should only be used when the preferred visible area is crowded.
+ */
+const expandedBoardSpawnBounds: BoardSpawnBounds = {
+    minXPercent: 8,
+    maxXPercent: 92,
+    minYPercent: 10,
+    maxYPercent: 88,
 };
 
 /**
  * Approximate pinned card footprint in board percentage units.
  *
- * The board stores card positions as center points, but the visual cards are
+ * The board stores card positions as centre points, but the visual cards are
  * rectangles. This footprint is used to reject spawn positions that would cause
  * destructive overlap with an existing pinned card.
  */
@@ -36,9 +48,6 @@ const pinnedCardFootprint = {
 
 /**
  * Candidate count for secondary seeded positions.
- *
- * Preferred slots are tried first, then seeded candidates provide variation if
- * the board already has unusual card placement.
  */
 const randomSpawnCandidateCount = 36;
 
@@ -58,27 +67,7 @@ const minimumReadableCardOffsetPercent = 9;
 const readableOverlapResolutionPasses = 3;
 
 /**
- * Preferred spawn slots for the current desktop-first board.
- *
- * These slots form a loose readable grid for the first several pinned cards.
- * They are not a final Arrange/Pan replacement; they are a safety net so basic
- * board play does not become destructive before Arrange exists.
- */
-const preferredSpawnCandidatePositions: BoardPosition[] = [
-    { xPercent: 29, yPercent: 32 },
-    { xPercent: 54, yPercent: 31 },
-    { xPercent: 76, yPercent: 34 },
-
-    { xPercent: 28, yPercent: 69 },
-    { xPercent: 53, yPercent: 70 },
-    { xPercent: 76, yPercent: 67 },
-
-    { xPercent: 41, yPercent: 50 },
-    { xPercent: 65, yPercent: 51 },
-];
-
-/**
- * Clamps a board percentage coordinate to the visible board area.
+ * Clamps a board percentage coordinate to the board area.
  */
 function clampPercent(value: number): number {
     return Math.min(96, Math.max(4, value));
@@ -148,9 +137,130 @@ function createPinnedEvidenceId(state: BoardState, evidenceId: string): string {
 }
 
 /**
+ * Keeps spawn bounds valid and safely inside the board-world coordinate range.
+ */
+function normalizeSpawnBounds(bounds: BoardSpawnBounds): BoardSpawnBounds {
+    const minXPercent = clampPercent(
+        Math.min(bounds.minXPercent, bounds.maxXPercent),
+    );
+    const maxXPercent = clampPercent(
+        Math.max(bounds.minXPercent, bounds.maxXPercent),
+    );
+    const minYPercent = clampPercent(
+        Math.min(bounds.minYPercent, bounds.maxYPercent),
+    );
+    const maxYPercent = clampPercent(
+        Math.max(bounds.minYPercent, bounds.maxYPercent),
+    );
+
+    return {
+        minXPercent,
+        maxXPercent,
+        minYPercent,
+        maxYPercent,
+    };
+}
+
+/**
+ * Creates anchor-like candidate points within a spawn bounds area.
+ *
+ * These candidates keep early card placement readable by trying corners and
+ * centre points before seeded random positions.
+ */
+function createPreferredCandidatesForBounds(
+    bounds: BoardSpawnBounds,
+): BoardPosition[] {
+    const normalizedBounds = normalizeSpawnBounds(bounds);
+    const centerX =
+        (normalizedBounds.minXPercent + normalizedBounds.maxXPercent) / 2;
+    const centerY =
+        (normalizedBounds.minYPercent + normalizedBounds.maxYPercent) / 2;
+
+    return [
+        {
+            xPercent: normalizedBounds.minXPercent,
+            yPercent: normalizedBounds.minYPercent,
+        },
+        {
+            xPercent: centerX,
+            yPercent: normalizedBounds.minYPercent,
+        },
+        {
+            xPercent: normalizedBounds.maxXPercent,
+            yPercent: normalizedBounds.minYPercent,
+        },
+
+        {
+            xPercent: normalizedBounds.minXPercent,
+            yPercent: centerY,
+        },
+        {
+            xPercent: centerX,
+            yPercent: centerY,
+        },
+        {
+            xPercent: normalizedBounds.maxXPercent,
+            yPercent: centerY,
+        },
+
+        {
+            xPercent: normalizedBounds.minXPercent,
+            yPercent: normalizedBounds.maxYPercent,
+        },
+        {
+            xPercent: centerX,
+            yPercent: normalizedBounds.maxYPercent,
+        },
+        {
+            xPercent: normalizedBounds.maxXPercent,
+            yPercent: normalizedBounds.maxYPercent,
+        },
+    ];
+}
+
+/**
+ * Creates deterministic random spawn candidates inside a bounds area.
+ */
+function createBoundedRandomSpawnCandidates(
+    seedValue: string,
+    bounds: BoardSpawnBounds,
+): BoardPosition[] {
+    const normalizedBounds = normalizeSpawnBounds(bounds);
+    const random = createSeededRandom(seedValue);
+    const randomCandidates: BoardPosition[] = [];
+
+    for (let index = 0; index < randomSpawnCandidateCount; index += 1) {
+        const xRange =
+            normalizedBounds.maxXPercent - normalizedBounds.minXPercent;
+        const yRange =
+            normalizedBounds.maxYPercent - normalizedBounds.minYPercent;
+
+        randomCandidates.push({
+            xPercent: normalizedBounds.minXPercent + random() * xRange,
+            yPercent: normalizedBounds.minYPercent + random() * yRange,
+        });
+    }
+
+    return randomCandidates;
+}
+
+/**
+ * Creates deterministic spawn candidates for one bounds area.
+ */
+function createCandidatesForBounds(
+    seedValue: string,
+    bounds: BoardSpawnBounds,
+): BoardPosition[] {
+    return [
+        ...createPreferredCandidatesForBounds(bounds),
+        ...createBoundedRandomSpawnCandidates(seedValue, bounds),
+    ];
+}
+
+/**
  * Checks whether two card rectangles would destructively overlap.
  *
- * Board positions are card centers. This function treats each card as an
+ * Board positions are card centres. This function treats each card as an
  * approximate rectangle and rejects positions where both horizontal and vertical
  * overlap are significant.
  */
@@ -219,73 +329,21 @@ function scoreCandidatePosition(
         }),
     );
 
-    const centerDeltaX = candidatePosition.xPercent - 50;
-    const centerDeltaY = candidatePosition.yPercent - 50;
-    const distanceFromBoardCenter = Math.sqrt(
-        centerDeltaX * centerDeltaX + centerDeltaY * centerDeltaY,
-    );
-
     if (overlapPenalty > 0) {
         return -10_000 - overlapPenalty * 100 + closestDistance;
     }
 
-    return closestDistance - distanceFromBoardCenter * 0.04;
+    return closestDistance;
 }
 
 /**
- * Creates seeded spawn candidates inside the visible board area.
- *
- * Preferred slots come first so early board layouts are readable and stable.
- * Seeded candidates are still included as backups for unusual board states.
+ * Picks the best position from a list of candidates.
  */
-function createSpawnCandidatePositions(seedValue: string): BoardPosition[] {
-    const random = createSeededRandom(seedValue);
-    const randomCandidates: BoardPosition[] = [];
-
-    for (let index = 0; index < randomSpawnCandidateCount; index += 1) {
-        const xRange =
-            visibleSpawnBounds.maxXPercent - visibleSpawnBounds.minXPercent;
-        const yRange =
-            visibleSpawnBounds.maxYPercent - visibleSpawnBounds.minYPercent;
-
-        randomCandidates.push({
-            xPercent: visibleSpawnBounds.minXPercent + random() * xRange,
-            yPercent: visibleSpawnBounds.minYPercent + random() * yRange,
-        });
-    }
-
-    return [...preferredSpawnCandidatePositions, ...randomCandidates];
-}
-
-/**
- * Picks a readable spawn position for newly pinned evidence.
- */
-function getDefaultPinnedPosition(
-    state: BoardState,
-    evidenceId: string,
-    pinnedAt: string,
+function pickBestSpawnCandidate(
+    candidates: readonly BoardPosition[],
+    existingPositions: readonly BoardPosition[],
 ): BoardPosition {
-    const existingPositions = state.pinnedEvidence.map(
-        (pinnedEvidence) => pinnedEvidence.position,
-    );
-
-    const candidates = createSpawnCandidatePositions(
-        `${evidenceId}:${pinnedAt}:${state.pinnedEvidence.length}`,
-    );
-
-    const nonOverlappingCandidates = candidates.filter((candidatePosition) =>
-        existingPositions.every(
-            (existingPosition) =>
-                !hasDestructiveCardOverlap(candidatePosition, existingPosition),
-        ),
-    );
-
-    const candidatesToScore =
-        nonOverlappingCandidates.length > 0
-            ? nonOverlappingCandidates
-            : candidates;
-
-    return candidatesToScore.reduce((bestPosition, candidatePosition) => {
+    return candidates.reduce((bestPosition, candidatePosition) => {
         const bestScore = scoreCandidatePosition(
             bestPosition,
             existingPositions,
@@ -296,111 +354,119 @@ function getDefaultPinnedPosition(
         );
 
         return candidateScore > bestScore ? candidatePosition : bestPosition;
-    }, candidatesToScore[0]);
+    }, candidates[0]);
 }
 
 /**
- * Finds a pinned evidence item by ID.
+ * Returns only candidates that do not destructively overlap existing cards.
  */
-function findPinnedEvidence(
-    state: BoardState,
-    pinnedEvidenceId: string,
-): PinnedEvidence | undefined {
-    return state.pinnedEvidence.find(
-        (pinnedEvidence) =>
-            pinnedEvidence.pinnedEvidenceId === pinnedEvidenceId,
+function getNonOverlappingCandidates(
+    candidates: readonly BoardPosition[],
+    existingPositions: readonly BoardPosition[],
+): BoardPosition[] {
+    return candidates.filter((candidatePosition) =>
+        existingPositions.every(
+            (existingPosition) =>
+                !hasDestructiveCardOverlap(candidatePosition, existingPosition),
+        ),
     );
 }
 
 /**
- * Creates a stable segment ID for one thread color and two pinned evidence IDs.
+ * Picks a readable spawn position for newly pinned evidence.
  *
- * Direction-insensitive: A -> B and B -> A are the same segment for the same
- * thread color.
+ * Spawn priority:
+ * 1. non-overlapping candidates in the currently visible board viewport;
+ * 2. least-destructive candidate in the currently visible board viewport;
+ * 3. non-overlapping candidates in the initial/default viewport;
+ * 4. non-overlapping candidates in the expanded board world;
+ * 5. least-destructive expanded-board candidate.
+ *
+ * The current viewport preference is intentionally strong. A player who pans to
+ * another section of the board expects new pinned files to appear near where
+ * they are working, not back at the original top-left board view.
  */
-function createConnectionId(
-    threadId: EvidenceThreadColorId,
-    fromPinnedEvidenceId: string,
-    toPinnedEvidenceId: string,
-): string {
-    const [left, right] = [fromPinnedEvidenceId, toPinnedEvidenceId].sort();
-
-    return `thread-${threadId}-${toIdFragment(left)}-${toIdFragment(right)}`;
-}
-
-/**
- * Pins evidence to the board.
- */
-export function pinEvidenceToBoard(
+function getDefaultPinnedPosition(
     state: BoardState,
     evidenceId: string,
-    validEvidenceIds: readonly string[],
     pinnedAt: string,
-): RuleResult<BoardState> {
-    if (!isKnownEvidenceId(validEvidenceIds, evidenceId)) {
-        return ruleFail(
-            "UNKNOWN_EVIDENCE",
-            "That evidence file does not exist in the active ticket.",
-            "error",
+    preferredSpawnBounds?: BoardSpawnBounds,
+): BoardPosition {
+    const existingPositions = state.pinnedEvidence.map(
+        (pinnedEvidence) => pinnedEvidence.position,
+    );
+
+    const seedValue = `${evidenceId}:${pinnedAt}:${state.pinnedEvidence.length}`;
+
+    const preferredViewportCandidates = preferredSpawnBounds
+        ? createCandidatesForBounds(
+              `${seedValue}:current-viewport`,
+              preferredSpawnBounds,
+          )
+        : [];
+
+    const initialViewportCandidates = createCandidatesForBounds(
+        `${seedValue}:initial-viewport`,
+        initialViewportSpawnBounds,
+    );
+
+    const expandedBoardCandidates = createCandidatesForBounds(
+        `${seedValue}:expanded-board`,
+        expandedBoardSpawnBounds,
+    );
+
+    const currentNonOverlappingCandidates = getNonOverlappingCandidates(
+        preferredViewportCandidates,
+        existingPositions,
+    );
+
+    if (currentNonOverlappingCandidates.length > 0) {
+        return pickBestSpawnCandidate(
+            currentNonOverlappingCandidates,
+            existingPositions,
         );
     }
 
+    /**
+     * If the current viewport is somewhat crowded, still prefer a visible
+     * position for the first several cards. This matches player expectation:
+     * early pinned cards should appear where the player is looking.
+     */
     if (
-        state.pinnedEvidence.some(
-            (pinnedEvidence) => pinnedEvidence.evidenceId === evidenceId,
-        )
+        preferredViewportCandidates.length > 0 &&
+        state.pinnedEvidence.length < 6
     ) {
-        return ruleFail(
-            "EVIDENCE_ALREADY_PINNED",
-            "That evidence file is already pinned to the board.",
+        return pickBestSpawnCandidate(
+            preferredViewportCandidates,
+            existingPositions,
         );
     }
 
-    const pinnedEvidence: PinnedEvidence = {
-        pinnedEvidenceId: createPinnedEvidenceId(state, evidenceId),
-        evidenceId,
-        position: getDefaultPinnedPosition(state, evidenceId, pinnedAt),
-        pinnedAt,
-    };
+    const initialNonOverlappingCandidates = getNonOverlappingCandidates(
+        initialViewportCandidates,
+        existingPositions,
+    );
 
-    return ruleOk({
-        ...state,
-        pinnedEvidence: [...state.pinnedEvidence, pinnedEvidence],
-        selectedPinnedEvidenceId: pinnedEvidence.pinnedEvidenceId,
-    });
-}
-
-/**
- * Removes a pinned evidence item and every thread segment touching it.
- */
-export function unpinEvidenceFromBoard(
-    state: BoardState,
-    pinnedEvidenceId: string,
-): RuleResult<BoardState> {
-    if (!findPinnedEvidence(state, pinnedEvidenceId)) {
-        return ruleFail(
-            "UNKNOWN_PINNED_EVIDENCE",
-            "That pinned evidence item does not exist on the board.",
-            "error",
+    if (!preferredSpawnBounds && initialNonOverlappingCandidates.length > 0) {
+        return pickBestSpawnCandidate(
+            initialNonOverlappingCandidates,
+            existingPositions,
         );
     }
 
-    return ruleOk({
-        ...state,
-        pinnedEvidence: state.pinnedEvidence.filter(
-            (pinnedEvidence) =>
-                pinnedEvidence.pinnedEvidenceId !== pinnedEvidenceId,
-        ),
-        connections: state.connections.filter(
-            (connection) =>
-                connection.fromPinnedEvidenceId !== pinnedEvidenceId &&
-                connection.toPinnedEvidenceId !== pinnedEvidenceId,
-        ),
-        selectedPinnedEvidenceId:
-            state.selectedPinnedEvidenceId === pinnedEvidenceId
-                ? null
-                : state.selectedPinnedEvidenceId,
-    });
+    const expandedNonOverlappingCandidates = getNonOverlappingCandidates(
+        expandedBoardCandidates,
+        existingPositions,
+    );
+
+    if (expandedNonOverlappingCandidates.length > 0) {
+        return pickBestSpawnCandidate(
+            expandedNonOverlappingCandidates,
+            existingPositions,
+        );
+    }
+
+    return pickBestSpawnCandidate(expandedBoardCandidates, existingPositions);
 }
 
 /**
@@ -478,8 +544,115 @@ function getStableNudgeDirection(leftId: string, rightId: string): -1 | 1 {
 }
 
 /**
- * Moves a pinned evidence item to a new board position.
+ * Finds a pinned evidence item by ID.
  */
+function findPinnedEvidence(
+    state: BoardState,
+    pinnedEvidenceId: string,
+): PinnedEvidence | undefined {
+    return state.pinnedEvidence.find(
+        (pinnedEvidence) =>
+            pinnedEvidence.pinnedEvidenceId === pinnedEvidenceId,
+    );
+}
+
+/**
+ * Creates a stable segment ID for one thread color and two pinned evidence IDs.
+ *
+ * Direction-insensitive: A -> B and B -> A are the same segment for the same
+ * thread color.
+ */
+function createConnectionId(
+    threadId: EvidenceThreadColorId,
+    fromPinnedEvidenceId: string,
+    toPinnedEvidenceId: string,
+): string {
+    const [left, right] = [fromPinnedEvidenceId, toPinnedEvidenceId].sort();
+
+    return `thread-${threadId}-${toIdFragment(left)}-${toIdFragment(right)}`;
+}
+
+/**
+ * Pins evidence to the board.
+ */
+export function pinEvidenceToBoard(
+    state: BoardState,
+    evidenceId: string,
+    validEvidenceIds: readonly string[],
+    pinnedAt: string,
+    preferredSpawnBounds?: BoardSpawnBounds,
+): RuleResult<BoardState> {
+    if (!isKnownEvidenceId(validEvidenceIds, evidenceId)) {
+        return ruleFail(
+            "UNKNOWN_EVIDENCE",
+            "That evidence file does not exist in the active ticket.",
+            "error",
+        );
+    }
+
+    if (
+        state.pinnedEvidence.some(
+            (pinnedEvidence) => pinnedEvidence.evidenceId === evidenceId,
+        )
+    ) {
+        return ruleFail(
+            "EVIDENCE_ALREADY_PINNED",
+            "That evidence file is already pinned to the board.",
+        );
+    }
+
+    const pinnedEvidence: PinnedEvidence = {
+        pinnedEvidenceId: createPinnedEvidenceId(state, evidenceId),
+        evidenceId,
+        position: getDefaultPinnedPosition(
+            state,
+            evidenceId,
+            pinnedAt,
+            preferredSpawnBounds,
+        ),
+        pinnedAt,
+    };
+
+    return ruleOk({
+        ...state,
+        pinnedEvidence: [...state.pinnedEvidence, pinnedEvidence],
+        selectedPinnedEvidenceId: pinnedEvidence.pinnedEvidenceId,
+    });
+}
+
+/**
+ * Removes a pinned evidence item and every thread segment touching it.
+ */
+export function unpinEvidenceFromBoard(
+    state: BoardState,
+    pinnedEvidenceId: string,
+): RuleResult<BoardState> {
+    if (!findPinnedEvidence(state, pinnedEvidenceId)) {
+        return ruleFail(
+            "UNKNOWN_PINNED_EVIDENCE",
+            "That pinned evidence item does not exist on the board.",
+            "error",
+        );
+    }
+
+    return ruleOk({
+        ...state,
+        pinnedEvidence: state.pinnedEvidence.filter(
+            (pinnedEvidence) =>
+                pinnedEvidence.pinnedEvidenceId !== pinnedEvidenceId,
+        ),
+        connections: state.connections.filter(
+            (connection) =>
+                connection.fromPinnedEvidenceId !== pinnedEvidenceId &&
+                connection.toPinnedEvidenceId !== pinnedEvidenceId,
+        ),
+        selectedPinnedEvidenceId:
+            state.selectedPinnedEvidenceId === pinnedEvidenceId
+                ? null
+                : state.selectedPinnedEvidenceId,
+    });
+}
+
 /**
  * Moves a pinned evidence item to a new board position.
  *

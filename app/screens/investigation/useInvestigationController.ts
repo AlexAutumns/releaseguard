@@ -130,8 +130,8 @@ export interface InvestigationController {
     ) => void;
     openEvidencePreview: (evidenceId: string) => void;
     closeEvidencePreview: () => void;
-    pinEvidence: (evidenceId: string) => void;
-    pinPreviewEvidence: () => void;
+    pinEvidence: (evidenceId: string, spawnBounds?: BoardSpawnBounds) => void;
+    pinPreviewEvidence: (spawnBounds?: BoardSpawnBounds) => void;
     unpinEvidence: (pinnedEvidenceId: string) => void;
     selectPinnedEvidence: (pinnedEvidenceId: string | null) => void;
     movePinnedEvidence: (
@@ -475,30 +475,38 @@ export function useInvestigationController({
         setPreviewEvidenceId(null);
     }, []);
 
-    const pinEvidence = useCallback((evidenceId: string) => {
-        dispatch({
-            type: "PIN_EVIDENCE",
-            evidenceId,
-            nowIso: new Date().toISOString(),
-        });
-    }, []);
+    const pinEvidence = useCallback(
+        (evidenceId: string, spawnBounds?: BoardSpawnBounds) => {
+            dispatch({
+                type: "PIN_EVIDENCE",
+                evidenceId,
+                nowIso: new Date().toISOString(),
+                spawnBounds,
+            });
+        },
+        [],
+    );
 
-    const pinPreviewEvidence = useCallback(() => {
-        if (
-            !previewEvidenceCard ||
-            pinnedEvidenceIds.has(previewEvidenceCard.id)
-        ) {
-            return;
-        }
+    const pinPreviewEvidence = useCallback(
+        (spawnBounds?: BoardSpawnBounds) => {
+            if (
+                !previewEvidenceCard ||
+                pinnedEvidenceIds.has(previewEvidenceCard.id)
+            ) {
+                return;
+            }
 
-        dispatch({
-            type: "PIN_EVIDENCE",
-            evidenceId: previewEvidenceCard.id,
-            nowIso: new Date().toISOString(),
-        });
+            dispatch({
+                type: "PIN_EVIDENCE",
+                evidenceId: previewEvidenceCard.id,
+                nowIso: new Date().toISOString(),
+                spawnBounds,
+            });
 
-        setPreviewEvidenceId(null);
-    }, [pinnedEvidenceIds, previewEvidenceCard]);
+            setPreviewEvidenceId(null);
+        },
+        [pinnedEvidenceIds, previewEvidenceCard],
+    );
 
     const isThreadReferencedByCasework = useCallback(
         (threadId: EvidenceThreadColorId) => {

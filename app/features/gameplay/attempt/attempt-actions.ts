@@ -1,5 +1,6 @@
 import type {
     BoardPosition,
+    BoardSpawnBounds,
     EvidenceThreadColorId,
 } from "../board/board-state";
 import type { ConnectToolMode } from "../connect/connect-state";
@@ -45,6 +46,14 @@ export type TicketAttemptAction =
           type: "PIN_EVIDENCE";
           evidenceId: string;
           nowIso: string;
+
+          /**
+           * Preferred board-world area for the new pinned card.
+           *
+           * The board rule treats this as a preference, not an absolute command,
+           * because it still needs to avoid destructive overlap with existing cards.
+           */
+          spawnBounds?: BoardSpawnBounds;
       }
     | {
           type: "UNPIN_EVIDENCE";

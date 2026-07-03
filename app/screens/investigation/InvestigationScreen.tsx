@@ -1,4 +1,9 @@
-import { useState } from "react";
+import {
+    useRef,
+    useState,
+    type PointerEvent as ReactPointerEvent,
+    type RefObject,
+} from "react";
 import { Link, useNavigate } from "react-router";
 
 import { GameNotificationStack } from "../../components/game-notifications/GameNotificationStack";
@@ -12,7 +17,10 @@ import type {
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
-import type { BoardPosition } from "../../features/gameplay/board/board-state";
+import type {
+    BoardPosition,
+    BoardSpawnBounds,
+} from "../../features/gameplay/board/board-state";
 import { cn } from "../../lib/cn";
 import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
 import { BoardThreadLayer } from "./BoardThreadLayer";
@@ -39,8 +47,26 @@ export interface InvestigationScreenProps {
 }
 
 type CaseworkTab = "new-finding" | "filed" | "verdict";
-
 type DragPreviewPositionsByPinnedId = Record<string, BoardPosition>;
+
+interface BoardPanOffset {
+    xPx: number;
+    yPx: number;
+}
+
+interface BoardPanState {
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startOffset: BoardPanOffset;
+}
+
+const defaultBoardPanOffset: BoardPanOffset = {
+    xPx: 0,
+    yPx: 0,
+};
+
+const boardWorldSizePercent = 140;
 
 /**
  * Active investigation workspace for one ticket.
@@ -109,6 +135,8 @@ function InvestigationWorkspace({
         useState<CaseworkTab>("new-finding");
 
     const controller = useInvestigationController({ shift, ticket });
+    const boardViewportRef = useRef<HTMLDivElement | null>(null);
+    const boardWorldRef = useRef<HTMLDivElement | null>(null);
 
     const navigate = useNavigate();
 
@@ -145,6 +173,34 @@ function InvestigationWorkspace({
         setIsCabinetOpen(false);
     };
 
+    /**
+     * Returns the current visible board-world spawn bounds.
+     *
+     * This lets pinned evidence appear near the section of the cork board the
+     * player is currently viewing, instead of always spawning in the original
+     * starting area.
+     */
+    const getCurrentBoardSpawnBounds = (): BoardSpawnBounds | undefined => {
+        return getBoardViewportSpawnBounds(
+            boardViewportRef.current,
+            boardWorldRef.current,
+        );
+    };
+
+    /**
+     * Pins an evidence file into the current visible board area.
+     */
+    const pinEvidenceInCurrentBoardView = (evidenceId: string) => {
+        controller.pinEvidence(evidenceId, getCurrentBoardSpawnBounds());
+    };
+
+    /**
+     * Pins the currently previewed evidence into the current visible board area.
+     */
+    const pinPreviewEvidenceInCurrentBoardView = () => {
+        controller.pinPreviewEvidence(getCurrentBoardSpawnBounds());
+    };
+
     return (
         <InvestigationWorkspaceShell>
             <InvestigationHud shift={shift} ticket={ticket} />
@@ -168,6 +224,7 @@ function InvestigationWorkspace({
                     <EvidenceCabinetPanel
                         controller={controller}
                         onCollapse={() => setIsCabinetOpen(false)}
+                        onPinEvidence={pinEvidenceInCurrentBoardView}
                         ticket={ticket}
                     />
                 ) : (
@@ -184,7 +241,11 @@ function InvestigationWorkspace({
                     />
                 )}
 
-                <InvestigationBoardPanel controller={controller} />
+                <InvestigationBoardPanel
+                    boardViewportRef={boardViewportRef}
+                    boardWorldRef={boardWorldRef}
+                    controller={controller}
+                />
 
                 {isCaseworkOpen ? (
                     <CaseworkPanel
@@ -239,7 +300,7 @@ function InvestigationWorkspace({
                 isOpen={Boolean(controller.previewEvidenceCard)}
                 isPinned={previewIsPinned}
                 onClose={controller.closeEvidencePreview}
-                onPinToBoard={controller.pinPreviewEvidence}
+                onPinToBoard={pinPreviewEvidenceInCurrentBoardView}
             />
         </InvestigationWorkspaceShell>
     );
@@ -266,6 +327,12 @@ function getWorkspaceGridColumns({
 interface EvidenceCabinetPanelProps {
     controller: InvestigationController;
     onCollapse: () => void;
+
+    /**
+     * Pins evidence into the current visible board viewport.
+     */
+    onPinEvidence: (evidenceId: string) => void;
+
     ticket: ReleaseTicketDefinition;
 }
 
@@ -279,6 +346,7 @@ interface EvidenceCabinetPanelProps {
 function EvidenceCabinetPanel({
     controller,
     onCollapse,
+    onPinEvidence,
     ticket,
 }: EvidenceCabinetPanelProps) {
     return (
@@ -386,9 +454,7 @@ function EvidenceCabinetPanel({
                                             className="h-8"
                                             disabled={!isInspected || isPinned}
                                             onClick={() =>
-                                                controller.pinEvidence(
-                                                    evidenceCard.id,
-                                                )
+                                                onPinEvidence(evidenceCard.id)
                                             }
                                             size="sm"
                                             title={
@@ -416,19 +482,34 @@ function EvidenceCabinetPanel({
 }
 
 interface InvestigationBoardPanelProps {
+    boardViewportRef: RefObject<HTMLDivElement | null>;
+    boardWorldRef: RefObject<HTMLDivElement | null>;
     controller: InvestigationController;
 }
 
 /**
  * Main cork board area.
  */
-function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
+function InvestigationBoardPanel({
+    boardViewportRef,
+    boardWorldRef,
+    controller,
+}: InvestigationBoardPanelProps) {
     const activeTool = controller.attempt.present.activeTool;
     const [hoveredConnectionId, setHoveredConnectionId] = useState<
         string | null
     >(null);
     const [dragPreviewPositionsByPinnedId, setDragPreviewPositionsByPinnedId] =
         useState<DragPreviewPositionsByPinnedId>({});
+
+    const panStateRef = useRef<BoardPanState | null>(null);
+    const [boardPanOffset, setBoardPanOffset] = useState<BoardPanOffset>(
+        defaultBoardPanOffset,
+    );
+
+    const isBoardPanned =
+        boardPanOffset.xPx !== defaultBoardPanOffset.xPx ||
+        boardPanOffset.yPx !== defaultBoardPanOffset.yPx;
 
     const hoveredConnection =
         controller.attempt.present.board.connections.find(
@@ -452,7 +533,8 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
     };
 
     /**
-     * Clears a temporary Arrange preview after the drag is committed or cancelled.
+     * Clears a temporary Arrange preview after the drag is committed or
+     * cancelled.
      */
     const clearPinnedEvidenceMovePreview = (pinnedEvidenceId: string) => {
         setDragPreviewPositionsByPinnedId((currentPositions) => {
@@ -462,6 +544,137 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
 
             return nextPositions;
         });
+    };
+
+    /**
+     * Starts a Pan-mode drag from empty board space.
+     *
+     * Pan is intentionally UI-only. It moves the board viewport, not card
+     * coordinates, evidence support, findings, verdicts, or scoring state.
+     */
+    const handleBoardPanPointerDown = (
+        event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+        if (activeTool !== "pan") {
+            return;
+        }
+
+        const targetElement =
+            event.target instanceof HTMLElement ? event.target : null;
+
+        if (
+            targetElement?.closest(
+                "[data-board-pinned-card='true'],button,a,input,textarea,select",
+            )
+        ) {
+            return;
+        }
+
+        const viewportElement = boardViewportRef.current;
+        const worldElement = boardWorldRef.current;
+
+        if (!viewportElement || !worldElement) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        panStateRef.current = {
+            pointerId: event.pointerId,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            startOffset: boardPanOffset,
+        };
+
+        event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    /**
+     * Updates the board viewport offset while the Pan tool is dragging.
+     */
+    const handleBoardPanPointerMove = (
+        event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+        const panState = panStateRef.current;
+
+        if (!panState || panState.pointerId !== event.pointerId) {
+            return;
+        }
+
+        const viewportElement = boardViewportRef.current;
+        const worldElement = boardWorldRef.current;
+
+        if (!viewportElement || !worldElement) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const nextOffset = clampBoardPanOffset(
+            {
+                xPx:
+                    panState.startOffset.xPx +
+                    (event.clientX - panState.startClientX),
+                yPx:
+                    panState.startOffset.yPx +
+                    (event.clientY - panState.startClientY),
+            },
+            viewportElement,
+            worldElement,
+        );
+
+        setBoardPanOffset(nextOffset);
+    };
+
+    /**
+     * Ends a Pan-mode drag.
+     */
+    const handleBoardPanPointerUp = (
+        event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+        const panState = panStateRef.current;
+
+        if (!panState || panState.pointerId !== event.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+
+        panStateRef.current = null;
+    };
+
+    /**
+     * Cancels a Pan-mode drag without changing the latest viewport offset.
+     */
+    const handleBoardPanPointerCancel = (
+        event: ReactPointerEvent<HTMLDivElement>,
+    ) => {
+        const panState = panStateRef.current;
+
+        if (!panState || panState.pointerId !== event.pointerId) {
+            return;
+        }
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+
+        panStateRef.current = null;
+    };
+
+    /**
+     * Restores the board viewport to the default view.
+     */
+    const resetBoardPan = () => {
+        panStateRef.current = null;
+        setBoardPanOffset(defaultBoardPanOffset);
     };
 
     return (
@@ -478,7 +691,7 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                         </h2>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
                         <Badge tone="warning">{activeTool}</Badge>
                         <Badge tone="neutral">
                             {
@@ -494,6 +707,17 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                             }{" "}
                             links
                         </Badge>
+
+                        <Button
+                            className="h-7 px-2 text-[0.65rem]"
+                            disabled={!isBoardPanned}
+                            onClick={resetBoardPan}
+                            size="sm"
+                            title="Reset board viewport"
+                            variant="secondary"
+                        >
+                            Reset View
+                        </Button>
                     </div>
                 </div>
 
@@ -504,32 +728,22 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
 
                     <div className="relative z-10 h-full min-h-[420px] p-2">
                         <div
-                            className="relative h-full overflow-hidden rounded-xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20"
-                            data-investigation-board-surface="true"
+                            className={cn(
+                                "relative h-full touch-none overflow-hidden rounded-xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20",
+                                activeTool === "pan"
+                                    ? "cursor-grab active:cursor-grabbing"
+                                    : "",
+                            )}
                             onClick={() =>
                                 controller.selectPinnedEvidence(null)
                             }
+                            onPointerCancel={handleBoardPanPointerCancel}
+                            onPointerDown={handleBoardPanPointerDown}
+                            onPointerMove={handleBoardPanPointerMove}
+                            onPointerUp={handleBoardPanPointerUp}
+                            ref={boardViewportRef}
                         >
-                            <BoardThreadLayer
-                                activeMode={
-                                    controller.connectInteraction.activeMode
-                                }
-                                activeTool={activeTool}
-                                connections={
-                                    controller.attempt.present.board.connections
-                                }
-                                hoveredConnectionId={hoveredConnectionId}
-                                onCutConnection={controller.cutBoardConnection}
-                                onHoveredConnectionChange={
-                                    setHoveredConnectionId
-                                }
-                                pinnedBoardItems={controller.pinnedBoardItems}
-                                previewPositionsByPinnedId={
-                                    dragPreviewPositionsByPinnedId
-                                }
-                            />
-
-                            {controller.pinnedBoardItems.length === 0 ? (
+                            {controller.pinnedBoardItems.length === 0 && (
                                 <div className="relative z-10 grid h-full place-items-center">
                                     <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
                                         <p className="text-base font-black text-rg-paper-strong">
@@ -544,8 +758,43 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                         </p>
                                     </div>
                                 </div>
-                            ) : (
-                                controller.pinnedBoardItems.map((item) => {
+                            )}
+
+                            <div
+                                className="absolute left-0 top-0"
+                                data-investigation-board-surface="true"
+                                ref={boardWorldRef}
+                                style={{
+                                    height: `${boardWorldSizePercent}%`,
+                                    transform: `translate3d(${boardPanOffset.xPx}px, ${boardPanOffset.yPx}px, 0)`,
+                                    width: `${boardWorldSizePercent}%`,
+                                }}
+                            >
+                                <BoardThreadLayer
+                                    activeMode={
+                                        controller.connectInteraction.activeMode
+                                    }
+                                    activeTool={activeTool}
+                                    connections={
+                                        controller.attempt.present.board
+                                            .connections
+                                    }
+                                    hoveredConnectionId={hoveredConnectionId}
+                                    onCutConnection={
+                                        controller.cutBoardConnection
+                                    }
+                                    onHoveredConnectionChange={
+                                        setHoveredConnectionId
+                                    }
+                                    pinnedBoardItems={
+                                        controller.pinnedBoardItems
+                                    }
+                                    previewPositionsByPinnedId={
+                                        dragPreviewPositionsByPinnedId
+                                    }
+                                />
+
+                                {controller.pinnedBoardItems.map((item) => {
                                     const isHoveredThreadEndpoint =
                                         Boolean(hoveredConnection) &&
                                         (hoveredConnection?.fromPinnedEvidenceId ===
@@ -630,8 +879,8 @@ function InvestigationBoardPanel({ controller }: InvestigationBoardPanelProps) {
                                             visibleThreadIds={visibleThreadIds}
                                         />
                                     );
-                                })
-                            )}
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -825,4 +1074,111 @@ function FiledCasework({ controller }: FiledCaseworkProps) {
             ))}
         </div>
     );
+}
+
+/**
+ * Clamps the board viewport offset so the larger board world cannot be dragged
+ * so far that the viewport becomes mostly empty.
+ */
+function clampBoardPanOffset(
+    requestedOffset: BoardPanOffset,
+    viewportElement: HTMLElement,
+    worldElement: HTMLElement,
+): BoardPanOffset {
+    const viewportRect = viewportElement.getBoundingClientRect();
+    const worldRect = worldElement.getBoundingClientRect();
+
+    const minX = Math.min(0, viewportRect.width - worldRect.width);
+    const minY = Math.min(0, viewportRect.height - worldRect.height);
+
+    return {
+        xPx: clampNumber(requestedOffset.xPx, minX, 0),
+        yPx: clampNumber(requestedOffset.yPx, minY, 0),
+    };
+}
+
+/**
+ * Clamps a number between a lower and upper bound.
+ */
+function clampNumber(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Creates safe spawn bounds from the currently visible board viewport.
+ *
+ * The viewport and world rectangles are measured from the DOM, so this works
+ * even after the board has been panned with CSS transforms.
+ */
+function getBoardViewportSpawnBounds(
+    viewportElement: HTMLElement | null,
+    worldElement: HTMLElement | null,
+): BoardSpawnBounds | undefined {
+    if (!viewportElement || !worldElement) {
+        return undefined;
+    }
+
+    const viewportRect = viewportElement.getBoundingClientRect();
+    const worldRect = worldElement.getBoundingClientRect();
+
+    if (worldRect.width <= 0 || worldRect.height <= 0) {
+        return undefined;
+    }
+
+    const visibleLeftPercent =
+        ((viewportRect.left - worldRect.left) / worldRect.width) * 100;
+    const visibleRightPercent =
+        ((viewportRect.right - worldRect.left) / worldRect.width) * 100;
+    const visibleTopPercent =
+        ((viewportRect.top - worldRect.top) / worldRect.height) * 100;
+    const visibleBottomPercent =
+        ((viewportRect.bottom - worldRect.top) / worldRect.height) * 100;
+
+    return createCardSafeSpawnBounds({
+        minXPercent: visibleLeftPercent,
+        maxXPercent: visibleRightPercent,
+        minYPercent: visibleTopPercent,
+        maxYPercent: visibleBottomPercent,
+    });
+}
+
+/**
+ * Insets visible bounds so spawned card centres stay mostly inside the current
+ * viewport instead of appearing clipped at the edges.
+ */
+function createCardSafeSpawnBounds(bounds: BoardSpawnBounds): BoardSpawnBounds {
+    const xInsetPercent = 12;
+    const yInsetPercent = 16;
+
+    const minXPercent = clampNumber(bounds.minXPercent + xInsetPercent, 4, 96);
+    const maxXPercent = clampNumber(bounds.maxXPercent - xInsetPercent, 4, 96);
+    const minYPercent = clampNumber(bounds.minYPercent + yInsetPercent, 4, 96);
+    const maxYPercent = clampNumber(bounds.maxYPercent - yInsetPercent, 4, 96);
+
+    if (minXPercent < maxXPercent && minYPercent < maxYPercent) {
+        return {
+            minXPercent,
+            maxXPercent,
+            minYPercent,
+            maxYPercent,
+        };
+    }
+
+    const centerXPercent = clampNumber(
+        (bounds.minXPercent + bounds.maxXPercent) / 2,
+        8,
+        92,
+    );
+    const centerYPercent = clampNumber(
+        (bounds.minYPercent + bounds.maxYPercent) / 2,
+        8,
+        92,
+    );
+
+    return {
+        minXPercent: clampNumber(centerXPercent - 4, 4, 96),
+        maxXPercent: clampNumber(centerXPercent + 4, 4, 96),
+        minYPercent: clampNumber(centerYPercent - 4, 4, 96),
+        maxYPercent: clampNumber(centerYPercent + 4, 4, 96),
+    };
 }
