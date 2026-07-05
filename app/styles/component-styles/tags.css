@@ -331,3 +331,84 @@
 
     border-left: 1px solid rgb(102 80 62 / 72%);
 }
+
+/**
+ * Compact machine/register field.
+ *
+ * Difficulty, authored-content counts, board counts, and similar technical
+ * values use the machine voice rather than semantic classification pigment.
+ *
+ * The open register frame preserves the material underneath it. Short vertical
+ * end rules and horizontal registration lines separate the value without
+ * creating another opaque mini-panel or semantic marker.
+ */
+.rg-register-field {
+    --rg-register-field-rule: color-mix(
+        in srgb,
+        var(--color-rg-info) 48%,
+        var(--color-rg-border-soft)
+    );
+
+    --rg-register-field-ink: color-mix(
+        in srgb,
+        var(--color-rg-info) 42%,
+        var(--color-rg-text)
+    );
+
+    position: relative;
+
+    display: inline-flex;
+    min-height: 1.8rem;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.34rem 0.62rem 0.28rem;
+
+    border-top: 1px solid var(--rg-register-field-rule);
+    border-bottom: 1px solid var(--rg-register-field-rule);
+
+    background: transparent;
+
+    color: var(--rg-register-field-ink);
+
+    font-family: var(--font-mono);
+    font-size: clamp(0.72rem, 0.69rem + 0.06vw, 0.8rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.055em;
+
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/**
+ * Short register-frame ends.
+ *
+ * These deliberately stop the field from becoming a normal bordered rectangle.
+ * The surrounding desk/register material remains visually continuous through
+ * the metadata field.
+ */
+.rg-register-field::before,
+.rg-register-field::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+
+    width: 0.24rem;
+
+    pointer-events: none;
+
+    content: "";
+}
+
+.rg-register-field::before {
+    left: 0;
+
+    border-left: 2px solid var(--rg-register-field-rule);
+}
+
+.rg-register-field::after {
+    right: 0;
+
+    border-right: 2px solid var(--rg-register-field-rule);
+}
