@@ -23,14 +23,17 @@ export interface ButtonProps
         ButtonClassNameOptions {}
 
 /**
- * Returns the Tailwind className string for a ReleaseGuard button.
+ * Returns the shared class string for ReleaseGuard controls.
  *
- * Design rule:
- * - primary = desk lamp / main investigation action;
- * - secondary = dark case desk control;
- * - ghost = quiet navigation;
- * - danger = destructive or warning action;
- * - stamp = verdict-style action.
+ * Material contract:
+ * - primary actions are brass-lit major controls;
+ * - secondary actions are dark desk controls;
+ * - ghost actions are quiet navigation controls;
+ * - danger controls use oxblood warning ink;
+ * - stamp controls use the verdict/stamp language.
+ *
+ * Object-specific controls such as folder pull labels and notebook bookmarks
+ * remain separate because their shape and motion belong to their material.
  */
 export function buttonClassName({
     variant = "secondary",
@@ -38,35 +41,27 @@ export function buttonClassName({
     className,
 }: ButtonClassNameOptions = {}): string {
     return cn(
-        "inline-flex items-center justify-center gap-2 border font-bold transition",
+        "rg-control inline-flex items-center justify-center gap-2 rounded-[0.28rem] border font-semibold",
         "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber",
-        "disabled:pointer-events-none disabled:opacity-55",
+        "disabled:pointer-events-none disabled:opacity-50",
         {
-            "rounded-xl px-3 py-1.5 text-xs": size === "sm",
-            "rounded-2xl px-4 py-2 text-sm": size === "md",
-            "rounded-2xl px-5 py-3 text-base": size === "lg",
+            "px-3 py-1.5 text-xs": size === "sm",
+            "px-4 py-2 text-sm": size === "md",
+            "px-5 py-3 text-base": size === "lg",
         },
         {
-            "border-rg-amber bg-rg-amber text-rg-night shadow-lg shadow-rg-amber/10 hover:bg-rg-paper-strong":
-                variant === "primary",
-            "border-rg-border-soft bg-rg-surface-raised text-rg-text shadow-lg shadow-black/25 hover:border-rg-amber/70 hover:bg-rg-surface-soft":
-                variant === "secondary",
-            "border-transparent bg-transparent text-rg-muted hover:bg-rg-surface-raised hover:text-rg-text":
-                variant === "ghost",
-            "border-rg-danger bg-rg-danger/10 text-rg-danger hover:bg-rg-danger hover:text-rg-text":
-                variant === "danger",
-            "rounded-xl border-2 border-rg-stamp bg-rg-stamp/10 px-6 py-4 text-sm uppercase tracking-[0.2em] text-rg-stamp shadow-xl shadow-rg-stamp/10 hover:bg-rg-stamp hover:text-rg-text":
-                variant === "stamp",
+            "rg-control--primary": variant === "primary",
+            "rg-control--secondary": variant === "secondary",
+            "rg-control--ghost": variant === "ghost",
+            "rg-control--danger": variant === "danger",
+            "rg-control--stamp rg-stamp-text": variant === "stamp",
         },
         className,
     );
 }
 
 /**
- * Reusable button primitive for ReleaseGuard UI.
- *
- * Keep this component gameplay-agnostic. It should not know about tickets,
- * findings, evidence cards, shifts, scoring, or navigation.
+ * Reusable gameplay-agnostic button primitive.
  */
 export function Button({
     variant = "secondary",

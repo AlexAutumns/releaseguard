@@ -1,0 +1,43 @@
+/**
+ * Shared gameplay notification motion.
+ *
+ * Notification entry and exit presentation belongs to the reusable notification
+ * interface contract. General scene, folder, document, and route motion remain
+ * owned by the foundation motion system.
+ */
+
+@keyframes rg-notification-in {
+    from {
+        opacity: 0;
+
+        transform: translateY(-0.35rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes rg-notification-out {
+    from {
+        opacity: 1;
+
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+
+        transform: translateY(-0.25rem) scale(0.98);
+    }
+}
+
+.rg-notification-enter {
+    animation: rg-notification-in 180ms var(--rg-ease-out) both;
+}
+
+.rg-notification-leave {
+    animation: rg-notification-out 190ms var(--rg-ease-in) both;
+}

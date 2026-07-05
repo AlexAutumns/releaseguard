@@ -1,0 +1,159 @@
+/**
+ * Shared ReleaseGuard motion and route-transition language.
+ *
+ * This file owns motion that applies across multiple screens or materials:
+ * shared lift/press helpers, route transitions, scene entry, folder presentation,
+ * and document reveal timing.
+ *
+ * Object-specific motion remains with its owner when the movement only makes
+ * sense for that object. For example, folder hover and pull-label movement live
+ * in the folder material stylesheet.
+ */
+
+.rg-lift-transition {
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        box-shadow var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out),
+        opacity var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-paper-lift {
+    transform: translate3d(0, -1px, 0);
+    box-shadow: var(--rg-shadow-raised);
+}
+
+.rg-press-active {
+    transform: translate3d(0, 1px, 0);
+}
+
+/**
+ * View-transition snapshots always have a noir backing colour. This prevents a
+ * white browser flash between routes when the root snapshots cross-fade.
+ */
+::view-transition,
+::view-transition-group(root),
+::view-transition-image-pair(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+    background: var(--color-rg-night);
+}
+
+::view-transition-group(root) {
+    isolation: isolate;
+}
+
+@keyframes rg-route-old {
+    from {
+        opacity: 1;
+        filter: brightness(1) contrast(1);
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        filter: brightness(0.56) contrast(1.04);
+        transform: translateY(-4px) scale(0.998);
+    }
+}
+
+@keyframes rg-route-new {
+    from {
+        opacity: 0;
+        filter: brightness(0.58) contrast(1.04);
+        transform: translateY(7px) scale(0.998);
+    }
+
+    to {
+        opacity: 1;
+        filter: brightness(1) contrast(1);
+        transform: translateY(0) scale(1);
+    }
+}
+
+::view-transition-old(root) {
+    animation: rg-route-old 220ms var(--rg-ease-in) both;
+    mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+    animation: rg-route-new 380ms var(--rg-ease-out) 45ms both;
+    mix-blend-mode: normal;
+}
+
+@keyframes rg-scene-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes rg-folder-settle {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes rg-sheet-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(13px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rg-scene-enter {
+    animation: rg-scene-enter var(--rg-motion-scene) var(--rg-ease-out) both;
+}
+
+.rg-folder-enter {
+    animation: rg-folder-settle 480ms var(--rg-ease-out) both;
+}
+
+.rg-sheet-enter {
+    animation: rg-sheet-reveal var(--rg-motion-document) var(--rg-ease-out) 90ms
+        both;
+}
+
+.rg-folder-sheet-stack > * {
+    opacity: 0;
+
+    animation: rg-sheet-reveal var(--rg-motion-document) var(--rg-ease-out) both;
+}
+
+.rg-folder-sheet-stack > :nth-child(1) {
+    animation-delay: 120ms;
+}
+
+.rg-folder-sheet-stack > :nth-child(2) {
+    animation-delay: 185ms;
+}
+
+.rg-folder-sheet-stack > :nth-child(3) {
+    animation-delay: 250ms;
+}
+
+.rg-folder-sheet-stack > :nth-child(4) {
+    animation-delay: 315ms;
+}
+
+.rg-folder-sheet-stack > :nth-child(n + 5) {
+    animation-delay: 380ms;
+}

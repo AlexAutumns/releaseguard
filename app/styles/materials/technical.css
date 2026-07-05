@@ -1,0 +1,28 @@
+/**
+ * Technical and warning-surface materials.
+ *
+ * Technical evidence such as code, logs, or machine output remains visually
+ * separate from typewritten case paper. Warning stripe presentation also lives
+ * here because it represents a technical/danger surface treatment rather than a
+ * generic interactive control.
+ */
+
+.rg-technical-surface {
+    background: linear-gradient(
+        135deg,
+        rgb(19 25 27 / 98%),
+        rgb(10 14 16 / 99%)
+    );
+
+    box-shadow:
+        inset 0 1px 0 rgb(109 143 168 / 8%),
+        0.4rem 0.65rem 1.4rem rgb(0 0 0 / 28%);
+}
+
+.rg-danger-stripes {
+    background-image: repeating-linear-gradient(
+        -12deg,
+        rgb(161 61 45 / 12%) 0 8px,
+        transparent 8px 16px
+    );
+}

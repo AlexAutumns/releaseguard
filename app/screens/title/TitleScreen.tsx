@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 
-import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClassName } from "../../components/ui/Button";
 import { Panel } from "../../components/ui/Panel";
 import { ScreenShell } from "../../components/ui/ScreenShell";
@@ -8,32 +7,37 @@ import { ScreenShell } from "../../components/ui/ScreenShell";
 /**
  * Title screen for ReleaseGuard.
  *
- * This screen acts like a game title screen, not a normal website homepage.
- * The tone should be noir detective first, academic project second.
+ * The hierarchy is intentionally game-first:
+ * - ReleaseGuard is the product wordmark;
+ * - the tagline supports the product instead of overpowering it;
+ * - desk classifications are shown as a typed register line, not SaaS badges;
+ * - paper content uses the case-file/typewriter voice.
  */
 export function TitleScreen() {
     return (
         <ScreenShell>
-            <div className="grid min-h-[calc(100vh-7rem)] place-items-center">
+            <div className="rg-scene-enter grid min-h-[calc(100vh-7rem)] place-items-center">
                 <div className="grid w-full gap-5 xl:grid-cols-[1.25fr_0.75fr] xl:items-stretch">
                     <Panel className="min-h-[520px]" padding="lg" tone="raised">
                         <div className="flex h-full flex-col justify-between gap-8">
                             <section>
-                                <div className="mb-5 flex flex-wrap gap-2">
-                                    <Badge tone="warning">Case File</Badge>
-                                    <Badge tone="info">Release Risk Desk</Badge>
-                                    <Badge tone="danger">Verdict Pending</Badge>
+                                <div className="rg-register-line mb-7">
+                                    <span>Case File RG-001</span>
+                                    <span>Release Risk Desk</span>
+                                    <span className="text-rg-danger">
+                                        Verdict Pending
+                                    </span>
                                 </div>
 
-                                <p className="mb-3 font-mono text-xs font-extrabold uppercase tracking-[0.26em] text-rg-amber">
+                                <p className="rg-display-title text-[clamp(2.8rem,3.8vw,4.8rem)] text-rg-amber">
                                     ReleaseGuard
                                 </p>
 
-                                <h1 className="max-w-5xl text-5xl font-black leading-none tracking-[-0.07em] text-rg-text sm:text-6xl lg:text-7xl xl:text-8xl">
+                                <h1 className="rg-display-title mt-5 max-w-4xl text-[clamp(3rem,4.5vw,5.1rem)] text-rg-text">
                                     Every release leaves a trail.
                                 </h1>
 
-                                <p className="mt-6 max-w-3xl text-base leading-8 text-rg-muted lg:text-lg">
+                                <p className="rg-body-copy mt-6 max-w-3xl text-base text-rg-muted lg:text-lg">
                                     Step into the release desk. Inspect
                                     evidence, pin clues, file findings, and
                                     stamp a verdict before risky code escapes
@@ -49,6 +53,7 @@ export function TitleScreen() {
                                             size: "lg",
                                         })}
                                         to="/desk"
+                                        viewTransition
                                     >
                                         Begin Investigation
                                     </Link>
@@ -63,9 +68,9 @@ export function TitleScreen() {
                                     </Button>
                                 </div>
 
-                                <p className="mt-3 max-w-xl font-mono text-xs uppercase tracking-[0.16em] text-rg-faint">
-                                    Continue is locked until local save progress
-                                    is implemented.
+                                <p className="rg-technical-label mt-4 max-w-xl text-rg-faint">
+                                    Continue locked until local save progress is
+                                    implemented.
                                 </p>
                             </section>
                         </div>
@@ -76,45 +81,45 @@ export function TitleScreen() {
                         padding="lg"
                         tone="notepad"
                     >
-                        <p className="font-mono text-xs font-extrabold uppercase tracking-[0.22em] text-rg-folder-dark">
+                        <p className="rg-folder-tab-label text-rg-paper-ink/78">
                             Desk Notes
                         </p>
 
-                        <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-rg-paper-ink">
-                            First assignment
+                        <h2 className="rg-display-heading mt-4 text-4xl text-rg-paper-ink">
+                            First Assignment
                         </h2>
 
-                        <div className="mt-6 grid gap-5 pl-12">
-                            <div>
-                                <p className="font-bold text-rg-paper-ink">
-                                    MVP objective
+                        <div className="mt-7 grid gap-6 pl-12">
+                            <section>
+                                <p className="rg-document-meta-value text-rg-paper-ink">
+                                    MVP Objective
                                 </p>
-                                <p className="mt-2 text-sm leading-7 text-rg-paper-muted">
+                                <p className="rg-document-copy mt-2 text-rg-paper-ink/82">
                                     Review fictional release tickets through
                                     evidence cards, findings, verdicts, scoring,
                                     and reports.
                                 </p>
-                            </div>
+                            </section>
 
-                            <div>
-                                <p className="font-bold text-rg-paper-ink">
-                                    Investigator rule
+                            <section>
+                                <p className="rg-document-meta-value text-rg-paper-ink">
+                                    Investigator Rule
                                 </p>
-                                <p className="mt-2 text-sm leading-7 text-rg-paper-muted">
+                                <p className="rg-document-copy mt-2 text-rg-paper-ink/82">
                                     A working feature is not automatically a
                                     safe release. Follow the evidence before
                                     stamping a verdict.
                                 </p>
-                            </div>
+                            </section>
 
-                            <div className="rounded-2xl border-2 border-rg-stamp/45 bg-rg-stamp/10 p-4">
-                                <p className="font-mono text-xs font-extrabold uppercase tracking-[0.18em] text-rg-stamp">
+                            <aside className="rg-margin-note">
+                                <p className="rg-document-meta-label text-rg-stamp">
                                     Reminder
                                 </p>
-                                <p className="mt-2 text-sm leading-6 text-rg-paper-muted">
+                                <p className="rg-document-copy mt-2 text-rg-paper-ink/82">
                                     Unsupported findings weaken the case.
                                 </p>
-                            </div>
+                            </aside>
                         </div>
                     </Panel>
                 </div>

@@ -1,0 +1,75 @@
+/**
+ * ReleaseGuard reduced-motion adaptation.
+ *
+ * This file is intentionally inert at the current architecture-refactor
+ * checkpoint because the equivalent block in the source app.css is commented
+ * out. B3.5-A must preserve current behaviour exactly.
+ *
+ * The planned B3.5-B motion QA contract will reactivate and scope these rules so
+ * the system motion preference remains respected while development visual QA can
+ * explicitly force full ReleaseGuard motion without editing CSS.
+ */
+
+/*
+@keyframes rg-reduced-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto !important;
+    }
+
+    .rg-control,
+    .rg-control-arrow,
+    .rg-folder-interactive .rg-folder-tab,
+    .rg-folder-interactive .rg-folder-body,
+    .rg-folder-action,
+    .rg-folder-action::before,
+    .rg-folder-action-arrow,
+    .rg-lift-transition {
+        transition-duration: 120ms !important;
+    }
+
+    .rg-control:hover,
+    .rg-control:active,
+    .rg-control:hover .rg-control-arrow,
+    .rg-folder-interactive:hover .rg-folder-tab,
+    .rg-folder-interactive:hover .rg-folder-body,
+    .rg-folder-interactive:active .rg-folder-tab,
+    .rg-folder-interactive:active .rg-folder-body,
+    .rg-folder-interactive:hover .rg-folder-action,
+    .rg-folder-interactive:active .rg-folder-action,
+    .rg-folder-interactive:hover .rg-folder-action-arrow,
+    .rg-paper-lift,
+    .rg-press-active {
+        transform: none !important;
+    }
+
+    .rg-control--primary::after {
+        display: none;
+    }
+
+    .rg-scene-enter,
+    .rg-folder-enter,
+    .rg-sheet-enter,
+    .rg-folder-sheet-stack > *,
+    .rg-notification-enter,
+    .rg-notification-leave {
+        animation: rg-reduced-fade 160ms ease-out both !important;
+
+        animation-delay: 0ms !important;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: rg-reduced-fade 160ms ease-out both !important;
+    }
+}
+*/

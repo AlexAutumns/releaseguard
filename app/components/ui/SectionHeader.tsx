@@ -13,10 +13,10 @@ export interface SectionHeaderProps {
 }
 
 /**
- * Shared section header for panels and screen sections.
+ * Shared section heading for dark UI panels and physical paper documents.
  *
- * Use tone="paper" only when the header is placed inside an aged-paper object.
- * Most app screens should use the default dark tone.
+ * Display headings use the noir identity voice. Eyebrows and supporting copy
+ * switch between dark-UI and document typography according to the material.
  */
 export function SectionHeader({
     eyebrow,
@@ -40,23 +40,26 @@ export function SectionHeader({
                 {eyebrow && (
                     <p
                         className={cn(
-                            "mb-1 font-mono text-xs font-extrabold uppercase tracking-[0.18em]",
-                            isPaper ? "text-rg-folder-dark" : "text-rg-amber",
+                            isPaper
+                                ? "rg-document-meta-label"
+                                : "rg-technical-label",
+                            isPaper ? "text-rg-paper-ink/72" : "text-rg-amber",
                         )}
                     >
                         {eyebrow}
                     </p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="mt-1 flex flex-wrap items-center gap-3">
                     <h2
                         className={cn(
-                            "text-2xl font-black tracking-[-0.04em]",
+                            "rg-display-heading text-2xl",
                             isPaper ? "text-rg-paper-ink" : "text-rg-text",
                         )}
                     >
                         {title}
                     </h2>
+
                     {meta}
                 </div>
 
@@ -64,7 +67,9 @@ export function SectionHeader({
                     <p
                         className={cn(
                             "mt-2 max-w-2xl text-sm leading-6",
-                            isPaper ? "text-rg-paper-muted" : "text-rg-muted",
+                            isPaper
+                                ? "rg-document-copy text-rg-paper-ink/82"
+                                : "rg-body-copy text-rg-muted",
                         )}
                     >
                         {description}

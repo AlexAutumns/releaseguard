@@ -1,0 +1,103 @@
+/**
+ * ReleaseGuard typography voices.
+ *
+ * Typography follows the author/source of the text:
+ * - Barlow Condensed represents the noir game/display voice;
+ * - Poppins represents dark UI and interactive controls;
+ * - Courier Prime represents office-created physical records;
+ * - JetBrains Mono represents machine and technical information;
+ * - Caveat represents investigator-authored annotations.
+ *
+ * Material components may choose one of these shared voices, but they should not
+ * redefine the application's font-role contract locally.
+ */
+
+.rg-display-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 0.94;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+}
+
+.rg-display-heading {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.rg-case-label,
+.rg-folder-tab-label {
+    font-family: var(--font-case);
+    font-size: clamp(0.8rem, 0.76rem + 0.08vw, 0.88rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.rg-technical-label {
+    font-family: var(--font-mono);
+    font-size: clamp(0.76rem, 0.72rem + 0.08vw, 0.84rem);
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.rg-stamp-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.rg-body-copy {
+    font-family: var(--font-sans);
+    line-height: 1.65;
+}
+
+/** Office-created physical record copy. */
+.rg-document-copy {
+    font-family: var(--font-case);
+    font-size: clamp(1rem, 0.96rem + 0.1vw, 1.1rem);
+    line-height: 1.62;
+}
+
+.rg-case-type {
+    font-family: var(--font-case);
+    line-height: 1.55;
+}
+
+.rg-document-meta-label {
+    font-family: var(--font-case);
+    font-size: clamp(0.8rem, 0.76rem + 0.08vw, 0.88rem);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.055em;
+    text-transform: uppercase;
+}
+
+.rg-document-meta-value {
+    font-family: var(--font-case);
+    font-size: clamp(0.9rem, 0.86rem + 0.08vw, 0.98rem);
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+/** Investigator-authored note voice. Use sparingly. */
+.rg-handwriting-note,
+.rg-handwriting-input {
+    font-family: var(--font-hand);
+    font-size: clamp(1.2rem, 1.12rem + 0.22vw, 1.45rem);
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: 0.01em;
+}
+
+.rg-handwriting-input {
+    font-size: clamp(1.08rem, 1.02rem + 0.14vw, 1.28rem);
+    line-height: 1.4;
+}

@@ -1,0 +1,198 @@
+/**
+ * Shared ReleaseGuard control presentation.
+ *
+ * This file owns reusable control variants used by buttons, button-like links,
+ * and future interface actions that follow the same physical control language.
+ *
+ * Object-specific controls remain with their physical owner when their shape or
+ * movement only makes sense as part of that object. Folder pull-label behaviour,
+ * for example, remains in materials/folder.css.
+ */
+
+/**
+ * Shared control contract.
+ *
+ * Buttons are physical desk controls with a common focus model. Variant classes
+ * provide different motion strength so quiet navigation and major CTAs do not
+ * feel identical.
+ */
+.rg-control {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
+    transform: translate3d(0, 0, 0);
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        box-shadow var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out),
+        filter var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-control-arrow {
+    display: inline-block;
+
+    transition: transform var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-control--primary {
+    border-color: rgb(214 160 68 / 92%);
+
+    background: linear-gradient(180deg, rgb(229 177 76), rgb(200 139 50));
+
+    color: var(--color-rg-night);
+
+    box-shadow:
+        0 3px 0 rgb(118 75 30 / 68%),
+        0.45rem 0.7rem 1.5rem rgb(0 0 0 / 23%);
+}
+
+.rg-control--primary::after {
+    position: absolute;
+    top: -45%;
+    bottom: -45%;
+    left: -42%;
+    z-index: -1;
+
+    width: 28%;
+
+    pointer-events: none;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgb(255 247 220 / 34%),
+        transparent
+    );
+
+    content: "";
+
+    transform: skewX(-18deg);
+
+    transition: left 520ms var(--rg-ease-out);
+}
+
+.rg-control--primary:hover {
+    transform: translate3d(0, -3px, 0);
+
+    filter: brightness(1.035);
+
+    box-shadow:
+        0 5px 0 rgb(118 75 30 / 62%),
+        0.65rem 0.95rem 2rem rgb(0 0 0 / 30%);
+}
+
+.rg-control--primary:hover::after {
+    left: 118%;
+}
+
+.rg-control--primary:hover .rg-control-arrow {
+    transform: translateX(3px);
+}
+
+.rg-control--primary:active {
+    transform: translate3d(0, 1px, 0);
+
+    box-shadow:
+        0 1px 0 rgb(118 75 30 / 70%),
+        0.2rem 0.35rem 0.8rem rgb(0 0 0 / 20%);
+}
+
+.rg-control--secondary {
+    border-color: var(--color-rg-border-soft);
+
+    background: linear-gradient(180deg, rgb(42 32 26), rgb(31 23 19));
+
+    color: var(--color-rg-text);
+
+    box-shadow:
+        0 3px 0 rgb(0 0 0 / 30%),
+        0.35rem 0.55rem 1.2rem rgb(0 0 0 / 20%);
+}
+
+.rg-control--secondary:hover {
+    transform: translate3d(0, -2px, 0);
+
+    border-color: rgb(214 160 68 / 74%);
+
+    background: linear-gradient(180deg, rgb(53 39 31), rgb(35 26 21));
+}
+
+.rg-control--secondary:hover .rg-control-arrow {
+    transform: translateX(2px);
+}
+
+.rg-control--secondary:active {
+    transform: translate3d(0, 1px, 0);
+    box-shadow: none;
+}
+
+.rg-control--ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-rg-muted);
+}
+
+.rg-control--ghost:hover {
+    transform: translate3d(0, -1px, 0);
+
+    border-color: rgb(102 80 62 / 52%);
+    background: rgb(36 27 22 / 58%);
+    color: var(--color-rg-text);
+}
+
+.rg-control--ghost:hover .rg-control-arrow {
+    transform: translateX(2px);
+}
+
+.rg-control--ghost:active {
+    transform: translate3d(0, 1px, 0);
+}
+
+.rg-control--danger {
+    border-color: rgb(186 74 54 / 78%);
+    background: rgb(111 35 29 / 24%);
+    color: #e7a493;
+
+    box-shadow: 0 3px 0 rgb(92 30 23 / 35%);
+}
+
+.rg-control--danger:hover {
+    transform: translate3d(0, -2px, 0);
+
+    background: rgb(161 61 45 / 86%);
+    color: var(--color-rg-text);
+}
+
+.rg-control--danger:active {
+    transform: translate3d(0, 1px, 0);
+    box-shadow: none;
+}
+
+.rg-control--stamp {
+    border-width: 2px;
+    border-color: rgb(161 61 45 / 86%);
+
+    background: rgb(111 35 29 / 8%);
+    color: var(--color-rg-stamp);
+
+    box-shadow: 0 3px 0 rgb(111 35 29 / 34%);
+}
+
+.rg-control--stamp:hover {
+    transform: translate3d(0, -2px, 0) rotate(-0.4deg);
+
+    background: rgb(161 61 45 / 13%);
+
+    box-shadow:
+        0 4px 0 rgb(111 35 29 / 30%),
+        0.5rem 0.8rem 1.6rem rgb(0 0 0 / 18%);
+}
+
+.rg-control--stamp:active {
+    transform: translate3d(0, 2px, 0) rotate(0.2deg);
+    box-shadow: none;
+}

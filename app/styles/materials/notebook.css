@@ -1,0 +1,55 @@
+/**
+ * ReleaseGuard investigator notebook material.
+ *
+ * This file owns ruled notebook paper and its margin-line/fibre treatment.
+ * Official case documents remain in materials/paper.css.
+ */
+
+/**
+ * Notebook ruling is a distinct paper family.
+ *
+ * The 2rem rule step is intentionally compatible with handwritten note rhythm.
+ * This texture must not be used for release tickets or official reports.
+ */
+.rg-notepad-texture {
+    --rg-notepad-line-step: 2rem;
+
+    background-image:
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0,
+            transparent calc(var(--rg-notepad-line-step) - 1px),
+            rgb(112 87 54 / 27%) calc(var(--rg-notepad-line-step) - 1px),
+            rgb(112 87 54 / 27%) var(--rg-notepad-line-step)
+        ),
+        linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 3.25rem,
+            rgb(161 61 45 / 31%) 3.25rem,
+            rgb(161 61 45 / 31%) calc(3.25rem + 1px),
+            transparent calc(3.25rem + 1px)
+        ),
+        radial-gradient(
+            circle at 18% 28%,
+            rgb(54 36 20 / 6%) 0 0.7px,
+            transparent 1px
+        ),
+        radial-gradient(
+            circle at 78% 66%,
+            rgb(54 36 20 / 4%) 0 0.6px,
+            transparent 1px
+        );
+
+    background-position:
+        0 0.55rem,
+        0 0,
+        0 0,
+        0 0;
+
+    background-size:
+        100% var(--rg-notepad-line-step),
+        100% 100%,
+        101px 109px,
+        137px 129px;
+}

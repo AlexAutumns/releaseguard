@@ -1,0 +1,34 @@
+/**
+ * Cork-board material presentation.
+ *
+ * This file owns the shared cork surface used by the investigation board.
+ * Board layout, card coordinates, Pan, Arrange, and Evidence Thread behaviour
+ * remain in the gameplay/UI layers rather than the material stylesheet.
+ */
+
+/** Irregular cork mottling for the investigation board. */
+.rg-cork-grain {
+    background-image:
+        radial-gradient(
+            circle at 8px 11px,
+            rgb(255 250 241 / 10%) 0 1px,
+            transparent 1.5px
+        ),
+        radial-gradient(
+            circle at 31px 29px,
+            rgb(0 0 0 / 15%) 0 1.2px,
+            transparent 1.7px
+        ),
+        radial-gradient(
+            circle at 53px 17px,
+            rgb(255 224 177 / 6%) 0 0.8px,
+            transparent 1.3px
+        ),
+        linear-gradient(135deg, rgb(107 69 44), rgb(63 41 29));
+
+    background-size:
+        61px 59px,
+        73px 67px,
+        83px 79px,
+        100% 100%;
+}
