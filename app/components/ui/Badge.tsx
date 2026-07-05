@@ -4,43 +4,87 @@ import { cn } from "../../lib/cn";
 
 export type BadgeTone =
     | "neutral"
+    | "account"
+    | "authentication"
+    | "security"
+    | "testing"
+    | "quality"
+    | "privacy"
+    | "operational"
+    | "communication"
+    | "reference"
     | "success"
     | "warning"
     | "danger"
     | "info"
+    | "violet"
     | "cork";
 
+export type BadgeKind = "classification" | "state";
+
+export type BadgeSurface = "dark" | "paper";
+
+const badgeToneClassName: Record<BadgeTone, string> = {
+    neutral: "rg-tag--neutral",
+    account: "rg-tag--account",
+    authentication: "rg-tag--authentication",
+    security: "rg-tag--security",
+    testing: "rg-tag--testing",
+    quality: "rg-tag--quality",
+    privacy: "rg-tag--privacy",
+    operational: "rg-tag--operational",
+    communication: "rg-tag--communication",
+    reference: "rg-tag--reference",
+    success: "rg-tag--success",
+    warning: "rg-tag--warning",
+    danger: "rg-tag--danger",
+    info: "rg-tag--info",
+    violet: "rg-tag--violet",
+    cork: "rg-tag--cork",
+};
+
+const badgeKindClassName: Record<BadgeKind, string> = {
+    classification: "rg-tag--classification",
+    state: "rg-tag--state",
+};
+
+const badgeSurfaceClassName: Record<BadgeSurface, string> = {
+    dark: "rg-tag--dark",
+    paper: "rg-tag--paper",
+};
+
 /**
- * Reusable badge primitive for short labels and status markers.
+ * Reusable physical classification or state marker.
  *
- * The visual style is intentionally muted and stamped-looking so badges feel
- * like case labels rather than bright SaaS status pills.
+ * `kind` selects the physical label language:
+ * - `classification` renders an archival case marker;
+ * - `state` renders a compact office/status stamp.
+ *
+ * `tone` selects semantic pigment and `surface` selects the readable treatment
+ * for the surrounding material. Machine-generated IDs, counters, and difficulty
+ * fields should use dedicated register/docket presentation instead of Badge.
+ *
+ * Visible text remains the primary information carrier so colour improves
+ * scanning without becoming a hidden code the player must memorise.
  */
 export function Badge({
+    kind = "state",
     tone = "neutral",
+    surface = "dark",
     className,
     ...props
 }: ComponentPropsWithoutRef<"span"> & {
+    kind?: BadgeKind;
     tone?: BadgeTone;
+    surface?: BadgeSurface;
 }) {
     return (
         <span
             className={cn(
-                "rg-technical-label inline-flex items-center rounded-md border px-2.5 py-1 text-[0.64rem]",
-                {
-                    "border-rg-border-soft bg-rg-surface-raised text-rg-muted":
-                        tone === "neutral",
-                    "border-rg-success/45 bg-rg-success/12 text-rg-success":
-                        tone === "success",
-                    "border-rg-warning/45 bg-rg-warning/12 text-rg-warning":
-                        tone === "warning",
-                    "border-rg-danger/45 bg-rg-danger/12 text-rg-danger":
-                        tone === "danger",
-                    "border-rg-info/45 bg-rg-info/12 text-rg-info":
-                        tone === "info",
-                    "border-rg-cork bg-rg-cork/22 text-rg-paper-strong":
-                        tone === "cork",
-                },
+                "rg-tag",
+                badgeKindClassName[kind],
+                badgeToneClassName[tone],
+                badgeSurfaceClassName[surface],
                 className,
             )}
             {...props}

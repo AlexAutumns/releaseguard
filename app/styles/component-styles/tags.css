@@ -1,78 +1,315 @@
 /**
- * Shared ReleaseGuard classification and register-label presentation.
+ * Shared ReleaseGuard classification, state, and register-label presentation.
  *
- * This file owns reusable classification labels and compact register metadata.
- * Domain meaning is communicated through visible text as well as pigment so
- * colour is never the only information signal.
+ * Classification and state markers belong to one visual family: compact ink
+ * markers applied over the material that already surrounds them.
  *
- * The current tone set is preserved for architecture parity. The expanded
- * domain taxonomy and paper/dark surface contract belong to B3.5-C.
+ * `kind` controls semantic emphasis.
+ * `tone` controls classification/status pigment.
+ * `surface` controls readable ink contrast against the underlying material.
+ *
+ * The tag must not create a separate opaque mini-surface. Paper grain, dark
+ * register gradients, and other parent-material character should remain visible
+ * through the marker.
+ *
+ * Machine metadata such as ticket IDs, difficulty values, evidence counts, and
+ * technical counters remains a separate register/docket concern.
+ *
+ * Visible text is always the primary information carrier. Pigment improves
+ * scanning and classification but never becomes a colour-only code.
  */
+
+/* -------------------------------------------------------------------------- */
+/* Shared ink-marker contract                                                  */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Classification labels use a colored ink edge and written label. They are
- * deliberately near-square and avoid the capsule silhouette of SaaS pills.
+ * Shared ReleaseGuard marker silhouette.
+ *
+ * The marker contributes a strong ink boundary, readable label, and short
+ * registration rule. Its background remains transparent apart from an extremely
+ * weak pigment wash so the real parent material continues through the marker.
  */
 .rg-tag {
+    --rg-tag-pigment: #756455;
+
+    --rg-tag-surface-border: var(--rg-tag-pigment);
+    --rg-tag-surface-ink: var(--rg-tag-pigment);
+    --rg-tag-surface-wash: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 5%,
+        transparent
+    );
+
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+
     display: inline-flex;
-    min-height: 1.8rem;
+    min-height: 1.9rem;
     align-items: center;
+    justify-content: center;
 
-    padding: 0.32rem 0.58rem 0.27rem;
+    padding: 0.4rem 0.74rem 0.36rem;
 
-    border: 1px solid rgb(242 231 213 / 12%);
-    border-left-width: 3px;
-    border-radius: 0.16rem;
+    border: 2px solid var(--rg-tag-surface-border);
+    border-radius: 0.04rem;
 
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+    background-color: transparent;
 
-    color: var(--color-rg-text);
+    background-image: linear-gradient(
+        108deg,
+        transparent 0 26%,
+        var(--rg-tag-surface-wash) 42%,
+        transparent 58%
+    );
 
-    font-family: var(--font-case);
-    font-size: clamp(0.72rem, 0.69rem + 0.06vw, 0.8rem);
+    color: var(--rg-tag-surface-ink);
+
+    font-family: var(--font-sans);
+    font-size: clamp(0.8rem, 0.76rem + 0.08vw, 0.88rem);
     font-weight: 700;
     line-height: 1;
-    letter-spacing: 0.055em;
+    letter-spacing: 0.025em;
 
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
-.rg-tag--neutral {
-    border-left-color: #8b735e;
-    background: #41352c;
+/**
+ * Short pigment registration rule.
+ *
+ * The rule provides a secondary physical/detail cue without turning the marker
+ * into a filled status card. It uses the semantic pigment directly so the same
+ * visual language survives across light and dark parent surfaces.
+ */
+.rg-tag::after {
+    position: absolute;
+    right: 0.48rem;
+    bottom: 0.16rem;
+    left: 0.48rem;
+
+    height: 1px;
+
+    pointer-events: none;
+
+    background: color-mix(in srgb, var(--rg-tag-pigment) 68%, transparent);
+
+    content: "";
 }
+
+/* -------------------------------------------------------------------------- */
+/* Marker kinds                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Domain classification marker.
+ *
+ * Classification markers receive slightly more horizontal room because they are
+ * designed for rapid scanning of release-risk subject areas.
+ */
+.rg-tag--classification {
+    padding-inline: 0.78rem;
+
+    font-size: clamp(0.81rem, 0.77rem + 0.08vw, 0.9rem);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+/**
+ * Current-state marker.
+ *
+ * State uses exactly the same physical marker family. A slightly tighter scale
+ * keeps status information subordinate to domain classification without
+ * introducing a second silhouette.
+ */
+.rg-tag--state {
+    min-height: 1.85rem;
+
+    padding: 0.38rem 0.68rem 0.34rem;
+
+    font-size: clamp(0.77rem, 0.73rem + 0.08vw, 0.85rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Material-aware ink contrast                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Marker placed on a dark ReleaseGuard surface.
+ *
+ * The underlying dark gradient, grit, or register surface remains visible.
+ * Surface handling only lifts the semantic pigment toward the shared light text
+ * colour and adjusts the border for dark-background contrast.
+ */
+.rg-tag--dark {
+    --rg-tag-surface-border: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 72%,
+        var(--color-rg-border-soft)
+    );
+
+    --rg-tag-surface-ink: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 46%,
+        var(--color-rg-text)
+    );
+
+    --rg-tag-surface-wash: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 7%,
+        transparent
+    );
+
+    text-shadow: 0 1px 0 rgb(0 0 0 / 24%);
+}
+
+/**
+ * Marker placed on aged physical paper.
+ *
+ * The real paper gradient, fibres, speckling, and later deterministic paper
+ * variation remain visible through the marker. Surface handling darkens the
+ * semantic pigment toward case-paper ink rather than painting a separate pale
+ * label over the document.
+ */
+.rg-tag--paper {
+    --rg-tag-surface-border: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 78%,
+        var(--color-rg-paper-ink)
+    );
+
+    --rg-tag-surface-ink: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 74%,
+        var(--color-rg-paper-ink)
+    );
+
+    --rg-tag-surface-wash: color-mix(
+        in srgb,
+        var(--rg-tag-pigment) 5%,
+        transparent
+    );
+
+    text-shadow: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Domain classification pigments                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Neutral / uncategorised office classification. */
+.rg-tag--neutral {
+    --rg-tag-pigment: #756455;
+}
+
+/** Identity, ownership, and account-context classification. */
+.rg-tag--account {
+    --rg-tag-pigment: #537897;
+}
+
+/**
+ * Login, credential, session, and authentication classification.
+ *
+ * Dark oxidised brass remains distinct from the aged tan paper family.
+ */
+.rg-tag--authentication {
+    --rg-tag-pigment: #88551f;
+}
+
+/** Security-control, threat, and protection classification. */
+.rg-tag--security {
+    --rg-tag-pigment: #8d3b33;
+}
+
+/** QA, validation, coverage, and verification classification. */
+.rg-tag--testing {
+    --rg-tag-pigment: #4f877f;
+}
+
+/** Regression, correctness, and product-quality classification. */
+.rg-tag--quality {
+    --rg-tag-pigment: #8d6d31;
+}
+
+/** Privacy and direct user-impact classification. */
+.rg-tag--privacy {
+    --rg-tag-pigment: #735c87;
+}
+
+/** Deployment, production, and operational-readiness classification. */
+.rg-tag--operational {
+    --rg-tag-pigment: #5d774a;
+}
+
+/** Release-note, change-communication, and disclosure classification. */
+.rg-tag--communication {
+    --rg-tag-pigment: #985838;
+}
+
+/** Baseline, specification, and technical-reference classification. */
+.rg-tag--reference {
+    --rg-tag-pigment: #607582;
+}
+
+/* -------------------------------------------------------------------------- */
+/* State and compatibility pigments                                           */
+/* -------------------------------------------------------------------------- */
 
 .rg-tag--success {
-    border-left-color: var(--color-rg-success);
-    background: #304333;
+    --rg-tag-pigment: var(--color-rg-success);
 }
 
 .rg-tag--warning {
-    border-left-color: var(--color-rg-amber);
-    background: #51401f;
+    --rg-tag-pigment: #a6752c;
 }
 
 .rg-tag--danger {
-    border-left-color: var(--color-rg-danger);
-    background: #512a25;
+    --rg-tag-pigment: var(--color-rg-danger);
 }
 
+/**
+ * Generic informational compatibility tone.
+ *
+ * New domain classifications should use an explicit domain tone rather than
+ * falling back to generic informational styling.
+ */
 .rg-tag--info {
-    border-left-color: var(--color-rg-info);
-    background: #2d3e48;
+    --rg-tag-pigment: var(--color-rg-info);
 }
 
-.rg-tag--cork {
-    border-left-color: #b17b45;
-    background: #4a3020;
-}
-
+/**
+ * Existing violet compatibility tone.
+ *
+ * Privacy has a dedicated domain tone. Violet remains available for current
+ * non-domain consumers until those screens receive their own semantic review.
+ */
 .rg-tag--violet {
-    border-left-color: var(--color-rg-violet);
-    background: #40344b;
+    --rg-tag-pigment: var(--color-rg-violet);
 }
 
-/** Case-register line used instead of multiple floating status pills. */
+/**
+ * Existing cork compatibility tone.
+ *
+ * Cork describes board/context presentation rather than a release-risk domain.
+ */
+.rg-tag--cork {
+    --rg-tag-pigment: #996337;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Register metadata                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Compact machine/register metadata.
+ *
+ * Ticket IDs, counts, difficulty markers, and technical counters are separate
+ * from semantic markers. These values use the machine voice and should not use
+ * Badge merely because they contain compact uppercase text.
+ */
 .rg-register-line {
     display: flex;
     flex-wrap: wrap;

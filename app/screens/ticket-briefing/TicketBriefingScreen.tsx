@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { Badge, type BadgeTone } from "../../components/ui/Badge";
 import { buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ScreenShell } from "../../components/ui/ScreenShell";
@@ -241,14 +242,16 @@ function FamilyFileSheet({ family }: FamilyFileSheetProps) {
             </p>
 
             {family?.tags && family.tags.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-rg-paper-ink/20 pt-3">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-rg-paper-ink/20 pt-3">
                     {family.tags.map((tag) => (
-                        <span
-                            className="rg-document-meta-label text-rg-paper-ink/72"
+                        <Badge
                             key={tag}
+                            kind="classification"
+                            surface="paper"
+                            tone={getFamilyTagTone(tag)}
                         >
                             {tag}
-                        </span>
+                        </Badge>
                     ))}
                 </div>
             )}
@@ -327,6 +330,23 @@ function EvidenceIndexSheet({ ticket }: EvidenceIndexSheetProps) {
             </ol>
         </section>
     );
+}
+
+/**
+ * Maps authored family classification labels to the reusable Badge pigment
+ * contract without leaking ticket-specific answer-key information.
+ */
+function getFamilyTagTone(tag: string): BadgeTone {
+    switch (tag.trim().toLowerCase()) {
+        case "account":
+            return "account";
+        case "authentication":
+            return "authentication";
+        case "security":
+            return "security";
+        default:
+            return "neutral";
+    }
 }
 
 /**
