@@ -53,6 +53,9 @@
     --color-rg-paper-ink: #251a12;
     --color-rg-paper-muted: #5f4832;
 
+    /** Deep brown ink used for investigator-authored handwritten notes. */
+    --color-rg-hand-ink: #34271f;
+
     --color-rg-notepad: #c8ad72;
     --color-rg-notepad-strong: #dbc48a;
     --color-rg-notepad-line: #80643f;

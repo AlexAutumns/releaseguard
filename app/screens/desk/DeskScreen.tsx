@@ -114,7 +114,7 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
  */
 function DeskLedger({ activeShift }: DeskLedgerProps) {
     return (
-        <section className="rg-paper-sheet rounded-md p-6 text-rg-paper-ink">
+        <section className="rg-paper-sheet rg-paper-sheet--02 rounded-md p-6 text-rg-paper-ink">
             <p className="rg-folder-tab-label text-rg-paper-ink/78">
                 Desk Ledger
             </p>

@@ -105,7 +105,7 @@ export function TitleScreen() {
                                 <p className="rg-document-meta-value text-rg-paper-ink">
                                     Investigator Rule
                                 </p>
-                                <p className="rg-document-copy mt-2 text-rg-paper-ink/82">
+                                <p className="rg-handwriting-note mt-2 text-rg-hand-ink">
                                     A working feature is not automatically a
                                     safe release. Follow the evidence before
                                     stamping a verdict.
@@ -116,7 +116,7 @@ export function TitleScreen() {
                                 <p className="rg-document-meta-label text-rg-stamp">
                                     Reminder
                                 </p>
-                                <p className="rg-document-copy mt-2 text-rg-paper-ink/82">
+                                <p className="rg-handwriting-note mt-2 text-rg-hand-ink">
                                     Unsupported findings weaken the case.
                                 </p>
                             </aside>

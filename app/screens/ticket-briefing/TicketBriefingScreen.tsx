@@ -142,7 +142,7 @@ export function TicketBriefingScreen({
  */
 function TicketBriefingSheet({ ticket }: TicketBriefingSheetProps) {
     return (
-        <article className="rg-paper-sheet rg-sheet-enter min-h-130 rounded-md p-6 text-rg-paper-ink lg:p-7">
+        <article className="rg-paper-sheet rg-paper-sheet--01 rg-sheet-enter min-h-130 rounded-md p-6 text-rg-paper-ink lg:p-7">
             <p className="rg-folder-tab-label text-rg-paper-ink/80">
                 Release Ticket
             </p>
@@ -189,7 +189,7 @@ function TicketBriefingSheet({ ticket }: TicketBriefingSheetProps) {
                     Desk Reminder
                 </p>
 
-                <p className="rg-document-copy mt-2 text-rg-paper-ink/88">
+                <p className="rg-handwriting-note mt-2 text-rg-hand-ink">
                     The briefing is not the verdict. Inspect the evidence and
                     file supported findings before stamping a release decision.
                 </p>
@@ -227,7 +227,7 @@ function TicketMetadata({ label, value }: TicketMetadataProps) {
  */
 function FamilyFileSheet({ family }: FamilyFileSheetProps) {
     return (
-        <section className="rg-paper-sheet rounded-md p-4 text-rg-paper-ink">
+        <section className="rg-paper-sheet rg-paper-sheet--03 rounded-md p-4 text-rg-paper-ink">
             <p className="rg-folder-tab-label text-rg-paper-ink/80">
                 Family File
             </p>
@@ -266,7 +266,7 @@ function BaselineReferenceSheet({
     familyReference,
 }: BaselineReferenceSheetProps) {
     return (
-        <section className="rg-paper-sheet rounded-md p-4 text-rg-paper-ink">
+        <section className="rg-paper-sheet rg-paper-sheet--02 rounded-md p-4 text-rg-paper-ink">
             <p className="rg-folder-tab-label text-rg-paper-ink/80">
                 Baseline Reference
             </p>
@@ -292,7 +292,7 @@ function BaselineReferenceSheet({
  */
 function EvidenceIndexSheet({ ticket }: EvidenceIndexSheetProps) {
     return (
-        <section className="rg-paper-sheet rounded-md p-4 text-rg-paper-ink">
+        <section className="rg-paper-sheet rg-paper-sheet--04 rounded-md p-4 text-rg-paper-ink">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="rg-folder-tab-label text-rg-paper-ink/80">

@@ -1,20 +1,37 @@
 /**
  * ReleaseGuard typewritten case-paper material.
  *
- * This file owns official/typewritten paper surfaces, document rules, docket
- * markers, margin notes, evidence-index presentation, and the legacy paper
- * grain overlay used by paper-toned shared panels.
+ * This file owns official/typewritten paper surfaces, deterministic paper
+ * variation, document rules, docket markers, margin notes, evidence-index
+ * presentation, and the legacy paper-grain overlay used by paper-toned panels.
  *
  * Investigator notebook ruling remains in materials/notebook.css.
  */
 
+/* -------------------------------------------------------------------------- */
+/* Shared case-paper material                                                 */
+/* -------------------------------------------------------------------------- */
+
 /**
  * Unruled aged case paper for office-created records.
  *
- * Low-frequency colour variation and sparse fibres keep the surface stylized
- * without creating notebook ruling or graph-paper grids.
+ * The base sheet owns only the shared material identity:
+ * - aged tan/cream stock;
+ * - broad low-frequency colour variation;
+ * - sparse fibres and pigment spots;
+ * - restrained edge ageing;
+ * - physical object shadow.
+ *
+ * No memorable stain, streak, or wear mark belongs to this base. Distinctive
+ * imperfection layouts are owned by the deterministic modifier variants below.
  */
 .rg-paper-sheet {
+    --rg-paper-stock-light: rgb(199 169 116);
+    --rg-paper-stock-mid: rgb(184 148 94);
+    --rg-paper-stock-deep: rgb(164 121 72);
+
+    --rg-paper-variant-overlay: linear-gradient(transparent, transparent);
+
     position: relative;
     isolation: isolate;
 
@@ -25,32 +42,20 @@
 
     background:
         radial-gradient(
-            ellipse at 14% 9%,
-            rgb(255 240 202 / 15%),
-            transparent 29%
+            ellipse at 10% 7%,
+            rgb(255 240 202 / 10%),
+            transparent 36%
         ),
         radial-gradient(
-            ellipse at 83% 76%,
-            rgb(83 46 20 / 7%),
-            transparent 34%
-        ),
-        linear-gradient(
-            101deg,
-            transparent 0 18%,
-            rgb(79 47 23 / 3.2%) 35%,
-            transparent 50%
-        ),
-        linear-gradient(
-            13deg,
-            transparent 0 67%,
-            rgb(244 211 158 / 3.8%) 73%,
-            transparent 81%
+            ellipse at 88% 84%,
+            rgb(83 46 20 / 4.5%),
+            transparent 42%
         ),
         linear-gradient(
             145deg,
-            rgb(199 169 116) 0%,
-            rgb(181 145 91) 58%,
-            rgb(160 116 68) 100%
+            var(--rg-paper-stock-light) 0%,
+            var(--rg-paper-stock-mid) 56%,
+            var(--rg-paper-stock-deep) 100%
         );
 
     box-shadow:
@@ -59,6 +64,12 @@
         inset -0.5rem -0.65rem 1.2rem rgb(78 44 20 / 7%);
 }
 
+/**
+ * Shared sparse paper fibres.
+ *
+ * These marks repeat at large, mismatched intervals and remain weak enough that
+ * they do not create a recognisable fingerprint shared by every sheet.
+ */
 .rg-paper-sheet::before {
     position: absolute;
     inset: 0;
@@ -81,23 +92,22 @@
             circle at 91% 61%,
             rgb(61 36 18 / 4%) 0 0.8px,
             transparent 1.1px
-        ),
-        linear-gradient(
-            92deg,
-            transparent 0 47%,
-            rgb(65 38 19 / 2.8%) 48%,
-            transparent 50%
         );
 
     background-size:
         79px 83px,
         113px 101px,
-        137px 127px,
-        100% 100%;
+        137px 127px;
 
     content: "";
 }
 
+/**
+ * Shared edge ageing plus the authored paper-variant overlay.
+ *
+ * Modifier classes only assign `--rg-paper-variant-overlay`. They do not copy
+ * or replace the shared paper material, so the base remains one source of truth.
+ */
 .rg-paper-sheet::after {
     position: absolute;
     inset: 0;
@@ -106,6 +116,7 @@
     pointer-events: none;
 
     background:
+        var(--rg-paper-variant-overlay),
         linear-gradient(
             90deg,
             rgb(255 246 218 / 3%),
@@ -128,6 +139,140 @@
     position: relative;
     z-index: 1;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Deterministic case-paper variants                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Variant 01 — warm upper-left wear.
+ *
+ * Slightly lighter and warmer stock identifies the primary release-ticket
+ * sheet. A broad upper-left worn area and restrained lower-right speckling give
+ * the page an authored imperfection without creating one dominant stain.
+ */
+.rg-paper-sheet--01 {
+    --rg-paper-stock-light: rgb(207 177 123);
+    --rg-paper-stock-mid: rgb(190 153 96);
+    --rg-paper-stock-deep: rgb(168 123 72);
+
+    --rg-paper-variant-overlay:
+        radial-gradient(
+            ellipse at 7% 5%,
+            rgb(255 243 209 / 14%),
+            transparent 34%
+        ),
+        radial-gradient(
+            ellipse at 83% 82%,
+            rgb(84 47 23 / 5.5%),
+            transparent 24%
+        ),
+        radial-gradient(
+            circle at 84% 78%,
+            rgb(57 33 17 / 10%) 0 0.8px,
+            transparent 1.2px
+        ),
+        radial-gradient(
+            circle at 92% 85%,
+            rgb(57 33 17 / 8%) 0 0.7px,
+            transparent 1.1px
+        ),
+        radial-gradient(
+            circle at 77% 92%,
+            rgb(57 33 17 / 6%) 0 0.9px,
+            transparent 1.3px
+        );
+}
+
+/**
+ * Variant 02 — deeper right-edge age.
+ *
+ * Slightly darker, more aged stock separates ledger/baseline documents from the
+ * warmer primary ticket. Right-edge ageing and a broad lower stain remain
+ * low-frequency so the page does not acquire a repeated decorative stripe.
+ */
+.rg-paper-sheet--02 {
+    --rg-paper-stock-light: rgb(195 164 111);
+    --rg-paper-stock-mid: rgb(177 140 87);
+    --rg-paper-stock-deep: rgb(153 108 62);
+
+    --rg-paper-variant-overlay:
+        linear-gradient(
+            90deg,
+            transparent 0 69%,
+            rgb(69 38 19 / 3%) 81%,
+            rgb(69 38 19 / 9%) 100%
+        ),
+        radial-gradient(
+            ellipse at 52% 108%,
+            rgb(91 49 24 / 11%),
+            transparent 48%
+        ),
+        radial-gradient(ellipse at 91% 27%, rgb(85 45 22 / 5%), transparent 22%);
+}
+
+/**
+ * Variant 03 — cooler centre-left fibre wash.
+ *
+ * A slightly cooler and less saturated stock gives the Family File a distinct
+ * archive-paper character. The centre-left wash remains broad and irregular
+ * rather than becoming a narrow memorable streak.
+ */
+.rg-paper-sheet--03 {
+    --rg-paper-stock-light: rgb(194 166 118);
+    --rg-paper-stock-mid: rgb(173 143 94);
+    --rg-paper-stock-deep: rgb(148 111 70);
+
+    --rg-paper-variant-overlay:
+        linear-gradient(
+            118deg,
+            transparent 0 13%,
+            rgb(64 48 34 / 4%) 22%,
+            rgb(64 48 34 / 7%) 31% 41%,
+            transparent 54%
+        ),
+        radial-gradient(
+            ellipse at 23% 47%,
+            rgb(80 103 105 / 6%),
+            transparent 45%
+        ),
+        radial-gradient(ellipse at 74% 82%, rgb(92 58 31 / 4%), transparent 29%);
+}
+
+/**
+ * Variant 04 — lower-corner wear.
+ *
+ * Slightly golden stock supports the evidence index while lower-left ageing and
+ * restrained upper-right discoloration create a different wear distribution
+ * from the other authored papers.
+ */
+.rg-paper-sheet--04 {
+    --rg-paper-stock-light: rgb(204 171 111);
+    --rg-paper-stock-mid: rgb(184 144 86);
+    --rg-paper-stock-deep: rgb(157 110 61);
+
+    --rg-paper-variant-overlay:
+        radial-gradient(
+            ellipse at 3% 97%,
+            rgb(70 38 19 / 13%),
+            transparent 27%
+        ),
+        radial-gradient(
+            ellipse at 90% 5%,
+            rgb(247 209 147 / 11%),
+            transparent 28%
+        ),
+        linear-gradient(
+            173deg,
+            transparent 0 74%,
+            rgb(78 43 21 / 4.5%) 88%,
+            transparent 100%
+        );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Document structure                                                         */
+/* -------------------------------------------------------------------------- */
 
 .rg-document-rule {
     border-top: 1px solid rgb(47 31 18 / 31%);
@@ -207,7 +352,17 @@
     letter-spacing: 0.05em;
 }
 
-/** Low-frequency fibre overlay for legacy paper Panel tone. */
+/* -------------------------------------------------------------------------- */
+/* Legacy shared paper-panel grain                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Low-frequency fibre overlay for the legacy paper Panel tone.
+ *
+ * This remains separate from `.rg-paper-sheet` and its deterministic variants.
+ * A later unused-selector/component audit may determine whether the legacy panel
+ * treatment is still required.
+ */
 .rg-paper-grain {
     background-image:
         radial-gradient(
