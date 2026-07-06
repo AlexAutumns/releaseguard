@@ -106,3 +106,29 @@ html[data-rg-motion="reduced"]::view-transition-new(root) {
         transform: none !important;
     }
 }
+
+/**
+ * Reduced-motion filed-report turns preserve the shared page lifecycle while
+ * replacing sheet travel and shadow sweeps with short opacity-only feedback.
+ */
+html[data-rg-motion="reduced"] .rg-report-page-stack::before,
+html[data-rg-motion="reduced"] .rg-report-page-stack::after {
+    transition-duration: 120ms !important;
+}
+
+html[data-rg-motion="reduced"]
+    .rg-report-page-stage[data-page-phase="leaving"] {
+    animation: rg-reduced-fade-out 120ms ease-out both !important;
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"]
+    .rg-report-page-stage[data-page-phase="entering"] {
+    animation: rg-reduced-fade 120ms ease-out both !important;
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"] .rg-report-shadow-sweep::before {
+    animation: none !important;
+    opacity: 0 !important;
+}
