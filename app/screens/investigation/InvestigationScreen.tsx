@@ -1,7 +1,9 @@
 import {
     useRef,
     useState,
+    type AnimationEvent as ReactAnimationEvent,
     type PointerEvent as ReactPointerEvent,
+    type ReactNode,
     type RefObject,
 } from "react";
 import { Link, useNavigate } from "react-router";
@@ -11,17 +13,26 @@ import { Badge } from "../../components/ui/Badge";
 import { Button, buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Panel } from "../../components/ui/Panel";
+
 import type {
     FamilyReferenceDefinition,
     ReleaseTicketDefinition,
     ShiftDefinition,
     TicketFamilyDefinition,
 } from "../../features/content/content-types";
+
 import type {
     BoardPosition,
     BoardSpawnBounds,
 } from "../../features/gameplay/board/board-state";
+import type {
+    PagedDocumentController,
+    PagedDocumentPage,
+} from "../../features/paged-document/paged-document-types";
+import { usePagedDocument } from "../../features/paged-document/usePagedDocument";
+
 import { cn } from "../../lib/cn";
+
 import { BoardPinnedEvidenceCard } from "./BoardPinnedEvidenceCard";
 import { BoardThreadLayer } from "./BoardThreadLayer";
 import { EvidencePreviewDialog } from "./EvidencePreviewDialog";
@@ -46,7 +57,19 @@ export interface InvestigationScreenProps {
     familyReference?: FamilyReferenceDefinition;
 }
 
-type CaseworkTab = "new-finding" | "filed" | "verdict";
+type CaseworkPageId = "casework:new" | "casework:filed" | "casework:verdict";
+
+interface CaseworkPage extends PagedDocumentPage {
+    id: CaseworkPageId;
+    label: string;
+}
+
+const caseworkPages = [
+    { id: "casework:new", label: "New" },
+    { id: "casework:filed", label: "Filed" },
+    { id: "casework:verdict", label: "Verdict" },
+] as const satisfies readonly CaseworkPage[];
+
 type DragPreviewPositionsByPinnedId = Record<string, BoardPosition>;
 
 interface BoardPanOffset {
@@ -131,8 +154,10 @@ function InvestigationWorkspace({
 }: InvestigationWorkspaceProps) {
     const [isCabinetOpen, setIsCabinetOpen] = useState(true);
     const [isCaseworkOpen, setIsCaseworkOpen] = useState(false);
-    const [activeCaseworkTab, setActiveCaseworkTab] =
-        useState<CaseworkTab>("new-finding");
+    const caseworkDocument = usePagedDocument({
+        pages: caseworkPages,
+        initialPageId: "casework:new",
+    });
 
     const controller = useInvestigationController({ shift, ticket });
     const boardViewportRef = useRef<HTMLDivElement | null>(null);
@@ -162,15 +187,38 @@ function InvestigationWorkspace({
           )
         : false;
 
+    /**
+     * Opens the evidence cabinet only when the Notebook is not turning a page.
+     *
+     * Opening Files closes Casework, so allowing this during a page animation
+     * would unmount the Notebook before its lifecycle can commit or finish.
+     */
     const openCabinet = () => {
+        if (caseworkDocument.isChangingPage) {
+            return;
+        }
+
         setIsCabinetOpen(true);
         setIsCaseworkOpen(false);
     };
 
-    const openCasework = (tab: CaseworkTab = activeCaseworkTab) => {
-        setActiveCaseworkTab(tab);
+    const openCasework = () => {
         setIsCaseworkOpen(true);
         setIsCabinetOpen(false);
+    };
+
+    /**
+     * Folds Casework only when no Notebook page turn is active.
+     *
+     * The paged-document hook intentionally knows nothing about the workspace
+     * drawer lifecycle, so this interaction conflict stays local to Casework.
+     */
+    const collapseCasework = () => {
+        if (caseworkDocument.isChangingPage) {
+            return;
+        }
+
+        setIsCaseworkOpen(false);
     };
 
     /**
@@ -249,10 +297,9 @@ function InvestigationWorkspace({
 
                 {isCaseworkOpen ? (
                     <CaseworkPanel
-                        activeTab={activeCaseworkTab}
                         controller={controller}
-                        onCollapse={() => setIsCaseworkOpen(false)}
-                        onSelectTab={setActiveCaseworkTab}
+                        document={caseworkDocument}
+                        onCollapse={collapseCasework}
                         onSubmitReport={submitTicketReport}
                     />
                 ) : (
@@ -267,7 +314,7 @@ function InvestigationWorkspace({
                                 }
                             </Badge>
                         }
-                        onOpen={() => openCasework("new-finding")}
+                        onOpen={openCasework}
                         side="right"
                     />
                 )}
@@ -890,23 +937,47 @@ function InvestigationBoardPanel({
 }
 
 interface CaseworkPanelProps {
-    activeTab: CaseworkTab;
     controller: InvestigationController;
+    document: PagedDocumentController<CaseworkPage>;
     onCollapse: () => void;
-    onSelectTab: (tab: CaseworkTab) => void;
     onSubmitReport: () => void;
 }
 
 /**
- * Casework panel for structured findings and verdict selection.
+ * Interactive Casework Notebook backed by the shared paged-document lifecycle.
+ *
+ * All three Notebook pages remain mounted while this panel exists. Casework
+ * owns residency, scroll, interaction locking, and physical page motion; the
+ * shared pager owns only the logical page-change lifecycle.
  */
 function CaseworkPanel({
-    activeTab,
     controller,
+    document,
     onCollapse,
-    onSelectTab,
     onSubmitReport,
 }: CaseworkPanelProps) {
+    /**
+     * Advances the logical page lifecycle at Notebook-owned animation
+     * boundaries. Child animations are ignored because only the physical page
+     * stage is allowed to commit or finish a page turn.
+     */
+    const handlePageAnimationEnd = (
+        event: ReactAnimationEvent<HTMLDivElement>,
+    ) => {
+        if (event.currentTarget !== event.target) {
+            return;
+        }
+
+        if (document.phase === "leaving") {
+            document.commitPageChange();
+            return;
+        }
+
+        if (document.phase === "entering") {
+            document.finishPageChange();
+        }
+    };
+
     return (
         <Panel className="h-full min-h-0" padding="sm" tone="notepad">
             <div className="flex h-full min-h-0 flex-col">
@@ -934,37 +1005,63 @@ function CaseworkPanel({
                     <Button
                         aria-label="Collapse casework drawer"
                         className="h-8 w-8 shrink-0 px-0"
+                        disabled={document.isChangingPage}
                         onClick={onCollapse}
                         size="sm"
-                        title="Collapse casework drawer"
+                        title={
+                            document.isChangingPage
+                                ? "Finish turning the Notebook page first."
+                                : "Collapse casework drawer"
+                        }
                         variant="secondary"
                     >
                         →
                     </Button>
                 </div>
 
-                <div className="mb-3 grid shrink-0 grid-cols-3 gap-1">
-                    <CaseworkTabButton
-                        isActive={activeTab === "new-finding"}
-                        label="New"
-                        onClick={() => onSelectTab("new-finding")}
-                    />
+                <nav
+                    aria-label="Casework notebook pages"
+                    className="rg-casework-bookmarks mb-3 shrink-0"
+                >
+                    {caseworkPages.map((page) => {
+                        const isCurrentPage =
+                            document.currentPageId === page.id;
+                        const isSelectedBookmark =
+                            document.pendingPageId === page.id ||
+                            (document.pendingPageId === null && isCurrentPage);
 
-                    <CaseworkTabButton
-                        isActive={activeTab === "filed"}
-                        label={`Filed (${controller.filedFindingItems.length})`}
-                        onClick={() => onSelectTab("filed")}
-                    />
+                        return (
+                            <CaseworkBookmarkButton
+                                isCurrentPage={isCurrentPage}
+                                isPageChanging={document.isChangingPage}
+                                isSelected={isSelectedBookmark}
+                                key={page.id}
+                                label={
+                                    page.id === "casework:filed"
+                                        ? `${page.label} (${controller.filedFindingItems.length})`
+                                        : page.label
+                                }
+                                onRequestPage={document.requestPage}
+                                pageId={page.id}
+                            />
+                        );
+                    })}
+                </nav>
 
-                    <CaseworkTabButton
-                        isActive={activeTab === "verdict"}
-                        label="Verdict"
-                        onClick={() => onSelectTab("verdict")}
-                    />
-                </div>
-
-                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                    {activeTab === "new-finding" && (
+                <div
+                    aria-busy={document.isChangingPage}
+                    className="rg-casework-page-stage rg-notepad-texture min-h-0 flex-1"
+                    data-page-direction={document.direction ?? undefined}
+                    data-page-phase={document.phase}
+                    onAnimationEnd={handlePageAnimationEnd}
+                >
+                    <CaseworkPageSection
+                        isCurrentPage={
+                            document.currentPageId === "casework:new"
+                        }
+                        isPageChanging={document.isChangingPage}
+                        pageId="casework:new"
+                    >
                         <FindingDraftForm
                             canFileFinding={controller.canFileDraftFinding}
                             draft={controller.attempt.present.findings.draft}
@@ -981,13 +1078,25 @@ function CaseworkPanel({
                             }
                             onToggleThread={controller.toggleDraftThreadLink}
                         />
-                    )}
+                    </CaseworkPageSection>
 
-                    {activeTab === "filed" && (
+                    <CaseworkPageSection
+                        isCurrentPage={
+                            document.currentPageId === "casework:filed"
+                        }
+                        isPageChanging={document.isChangingPage}
+                        pageId="casework:filed"
+                    >
                         <FiledCasework controller={controller} />
-                    )}
+                    </CaseworkPageSection>
 
-                    {activeTab === "verdict" && (
+                    <CaseworkPageSection
+                        isCurrentPage={
+                            document.currentPageId === "casework:verdict"
+                        }
+                        isPageChanging={document.isChangingPage}
+                        pageId="casework:verdict"
+                    >
                         <VerdictDrawer
                             canSubmitReport={controller.canSubmitReport}
                             filedFindingCount={
@@ -1001,36 +1110,45 @@ function CaseworkPanel({
                                     .selectedVerdict
                             }
                         />
-                    )}
+                    </CaseworkPageSection>
                 </div>
             </div>
         </Panel>
     );
 }
 
-interface CaseworkTabButtonProps {
-    isActive: boolean;
+interface CaseworkBookmarkButtonProps {
+    isCurrentPage: boolean;
+    isPageChanging: boolean;
+    isSelected: boolean;
     label: string;
-    onClick: () => void;
+    onRequestPage: (pageId: string) => void;
+    pageId: CaseworkPageId;
 }
 
 /**
- * Simple casework tab button.
+ * Physical Notebook bookmark used for named direct page navigation.
+ *
+ * The button stays focusable while a turn is active so the selected bookmark
+ * can retain focus. `aria-disabled` communicates the temporary interaction
+ * lock, while usePagedDocument remains the final guard against repeated input.
  */
-function CaseworkTabButton({
-    isActive,
+function CaseworkBookmarkButton({
+    isCurrentPage,
+    isPageChanging,
+    isSelected,
     label,
-    onClick,
-}: CaseworkTabButtonProps) {
+    onRequestPage,
+    pageId,
+}: CaseworkBookmarkButtonProps) {
     return (
         <button
-            className={cn(
-                "rounded-xl border px-2 py-2 text-xs font-bold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber",
-                isActive
-                    ? "border-rg-amber bg-rg-amber text-rg-night"
-                    : "border-rg-border-soft bg-rg-surface-raised text-rg-text hover:border-rg-amber/70 hover:bg-rg-surface-soft",
-            )}
-            onClick={onClick}
+            aria-current={isCurrentPage ? "page" : undefined}
+            aria-disabled={isPageChanging}
+            className="rg-casework-bookmark"
+            data-selected={isSelected ? "true" : "false"}
+            id={getCaseworkBookmarkId(pageId)}
+            onClick={() => onRequestPage(pageId)}
             type="button"
         >
             {label}
@@ -1038,6 +1156,50 @@ function CaseworkTabButton({
     );
 }
 
+interface CaseworkPageSectionProps {
+    children: ReactNode;
+    isCurrentPage: boolean;
+    isPageChanging: boolean;
+    pageId: CaseworkPageId;
+}
+
+/**
+ * One resident Casework Notebook page with its own scroll region.
+ *
+ * Inactive pages stay mounted so browser-maintained page state, such as scroll
+ * position, can survive page visits without moving presentation state into the
+ * gameplay reducer. Only the settled current page is interactive and exposed as
+ * active content.
+ */
+function CaseworkPageSection({
+    children,
+    isCurrentPage,
+    isPageChanging,
+    pageId,
+}: CaseworkPageSectionProps) {
+    const isInteractive = isCurrentPage && !isPageChanging;
+
+    return (
+        <section
+            aria-hidden={!isInteractive}
+            aria-labelledby={getCaseworkBookmarkId(pageId)}
+            className="rg-casework-page rg-scrollbar-thin h-full min-h-0 overflow-y-auto overscroll-contain pr-1"
+            data-casework-page-id={pageId}
+            hidden={!isCurrentPage}
+            inert={!isInteractive}
+            role="region"
+        >
+            {children}
+        </section>
+    );
+}
+
+/**
+ * Returns the DOM ID used to connect a Casework page to its physical bookmark.
+ */
+function getCaseworkBookmarkId(pageId: CaseworkPageId): string {
+    return `casework-bookmark-${pageId.replace("casework:", "")}`;
+}
 interface FiledCaseworkProps {
     controller: InvestigationController;
 }

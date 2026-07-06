@@ -79,4 +79,30 @@ html[data-rg-motion="reduced"] .rg-notification-leave {
 html[data-rg-motion="reduced"]::view-transition-old(root),
 html[data-rg-motion="reduced"]::view-transition-new(root) {
     animation: rg-reduced-fade 160ms ease-out both !important;
+
+    /**
+ * Reduced-motion Casework page changes keep the same leave/commit/enter
+ * lifecycle while replacing spatial sheet movement with opacity-only feedback.
+ */
+    @keyframes rg-reduced-fade-out {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0;
+        }
+    }
+
+    html[data-rg-motion="reduced"]
+        .rg-casework-page-stage[data-page-phase="leaving"] {
+        animation: rg-reduced-fade-out 120ms ease-out both !important;
+        transform: none !important;
+    }
+
+    html[data-rg-motion="reduced"]
+        .rg-casework-page-stage[data-page-phase="entering"] {
+        animation: rg-reduced-fade 120ms ease-out both !important;
+        transform: none !important;
+    }
 }

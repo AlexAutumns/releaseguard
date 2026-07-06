@@ -53,3 +53,175 @@
         101px 109px,
         137px 129px;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Casework Notebook page movement                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Physical bookmark rail for the three fixed Casework Notebook pages.
+ *
+ * Bookmarks are document navigation, not generic application tabs. Their
+ * presentation therefore remains owned by the notebook material.
+ */
+.rg-casework-bookmarks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.25rem;
+    align-items: end;
+}
+
+.rg-casework-bookmark {
+    min-width: 0;
+    border: 1px solid rgb(82 56 31 / 62%);
+    border-bottom-color: rgb(82 56 31 / 78%);
+    border-radius: 0.5rem 0.5rem 0.15rem 0.15rem;
+    padding: 0.55rem 0.45rem 0.48rem;
+
+    color: var(--color-rg-paper-ink);
+    background: rgb(177 147 97 / 72%);
+    box-shadow:
+        inset 0 1px rgb(255 244 211 / 18%),
+        0 2px 4px rgb(44 28 15 / 16%);
+
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1.15;
+    text-align: center;
+    text-transform: uppercase;
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        box-shadow var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-bookmark:hover,
+.rg-casework-bookmark:focus-visible {
+    border-color: rgb(111 76 35 / 88%);
+    background: rgb(194 160 99 / 88%);
+}
+
+.rg-casework-bookmark:focus-visible {
+    outline: 2px solid var(--color-rg-amber);
+    outline-offset: 2px;
+}
+
+.rg-casework-bookmark[data-selected="true"] {
+    z-index: 1;
+    border-color: rgb(95 63 27 / 92%);
+    background: rgb(205 169 101 / 96%);
+    box-shadow:
+        inset 0 1px rgb(255 247 222 / 28%),
+        0 4px 8px rgb(44 28 15 / 22%);
+    transform: translateY(2px);
+}
+
+.rg-casework-bookmark[aria-disabled="true"] {
+    cursor: wait;
+}
+
+/**
+ * One physical Notebook sheet stage.
+ *
+ * The entire sheet moves during a page change. Child form controls never run
+ * independent turn animations. At rest the page has no transform or opacity
+ * reduction so reading and interaction stay completely still.
+ */
+.rg-casework-page-stage {
+    position: relative;
+    min-height: 0;
+    border: 1px solid rgb(112 87 54 / 38%);
+    border-radius: 0.6rem;
+    padding: 0.35rem 0.2rem 0.2rem 0.35rem;
+
+    color: var(--color-rg-paper-ink);
+    background-color: var(--color-rg-notepad);
+    box-shadow:
+        inset 0 1px rgb(255 250 232 / 18%),
+        0 0.45rem 1rem rgb(54 36 20 / 14%);
+
+    transform: none;
+    opacity: 1;
+    transform-origin: 50% 16%;
+    will-change: auto;
+}
+
+.rg-casework-page {
+    min-height: 0;
+}
+
+@keyframes rg-casework-page-leave-forward {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(-1.25rem, -0.15rem, 0) rotate(-0.55deg);
+    }
+}
+
+@keyframes rg-casework-page-leave-backward {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(1.25rem, -0.15rem, 0) rotate(0.55deg);
+    }
+}
+
+@keyframes rg-casework-page-enter-forward {
+    from {
+        opacity: 0;
+        transform: translate3d(1.25rem, 0.2rem, 0) rotate(0.55deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes rg-casework-page-enter-backward {
+    from {
+        opacity: 0;
+        transform: translate3d(-1.25rem, 0.2rem, 0) rotate(-0.55deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.rg-casework-page-stage[data-page-phase="leaving"][data-page-direction="forward"] {
+    animation: rg-casework-page-leave-forward var(--rg-motion-document)
+        var(--rg-ease-in) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="leaving"][data-page-direction="backward"] {
+    animation: rg-casework-page-leave-backward var(--rg-motion-document)
+        var(--rg-ease-in) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="entering"][data-page-direction="forward"] {
+    animation: rg-casework-page-enter-forward var(--rg-motion-document)
+        var(--rg-ease-out) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="entering"][data-page-direction="backward"] {
+    animation: rg-casework-page-enter-backward var(--rg-motion-document)
+        var(--rg-ease-out) both;
+    will-change: transform, opacity;
+}
