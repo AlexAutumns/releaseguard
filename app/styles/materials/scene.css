@@ -1,0 +1,203 @@
+/**
+ * ReleaseGuard scene atmosphere and cinematic dark-surface materials.
+ *
+ * This file owns the visual environment surrounding physical desk objects:
+ * the global noir scene background, crosshatching, vignette/halftone overlays,
+ * title case panel, wordmark shadow, and reusable dark surface grit.
+ *
+ * Global document defaults remain in app.css. Screen-register framing remains
+ * in component-styles/screen-register.css.
+ */
+
+/**
+ * Layered night-scene lighting.
+ *
+ * The document's structural background colour remains part of the app.css
+ * document contract; this rule supplies the ReleaseGuard scene artwork.
+ */
+html {
+    background:
+        radial-gradient(
+            circle at 16% 6%,
+            rgb(214 160 68 / 14%),
+            transparent 25rem
+        ),
+        radial-gradient(
+            circle at 91% 16%,
+            rgb(109 143 168 / 7%),
+            transparent 28rem
+        ),
+        radial-gradient(
+            circle at 50% 118%,
+            rgb(91 47 30 / 22%),
+            transparent 34rem
+        ),
+        linear-gradient(135deg, #050403 0%, #100d0b 48%, #070605 100%);
+}
+
+/**
+ * Ink-dark crosshatching and scene vignette.
+ *
+ * Fine texture is reserved for large atmospheric surfaces. The opacity is low
+ * enough that it frames the scene without competing with readable documents.
+ */
+body::before {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    content: "";
+
+    background:
+        repeating-linear-gradient(
+            32deg,
+            rgb(242 231 213 / 1.15%) 0,
+            rgb(242 231 213 / 1.15%) 1px,
+            transparent 1px,
+            transparent 8px
+        ),
+        repeating-linear-gradient(
+            148deg,
+            rgb(242 231 213 / 0.85%) 0,
+            rgb(242 231 213 / 0.85%) 1px,
+            transparent 1px,
+            transparent 11px
+        ),
+        radial-gradient(
+            ellipse at center,
+            transparent 0%,
+            transparent 48%,
+            rgb(0 0 0 / 24%) 72%,
+            rgb(0 0 0 / 58%) 100%
+        );
+
+    opacity: 0.84;
+}
+
+/**
+ * Sparse graphic-novel halftone patches.
+ *
+ * The pattern is intentionally uneven and limited to scene edges rather than
+ * forming a uniform developer-dashboard dot grid.
+ */
+body::after {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    content: "";
+
+    background:
+        radial-gradient(circle, rgb(214 160 68 / 8%) 0 1px, transparent 1.4px)
+            92% 6% / 13px 13px no-repeat,
+        radial-gradient(circle, rgb(109 143 168 / 5%) 0 1px, transparent 1.4px)
+            3% 88% / 15px 15px no-repeat;
+
+    opacity: 0.42;
+}
+
+/**
+ * Title card surface: ink-black graphic-novel panel rather than a uniform dot
+ * grid. The Panel component's generic grit layer is hidden for this material.
+ */
+.rg-title-case-panel {
+    border-radius: 0.55rem !important;
+
+    background:
+        radial-gradient(
+            circle at 12% 8%,
+            rgb(214 160 68 / 11%),
+            transparent 18rem
+        ),
+        linear-gradient(118deg, rgb(34 26 21 / 97%), rgb(16 13 11 / 99%));
+}
+
+.rg-title-case-panel > [aria-hidden="true"] {
+    opacity: 0;
+}
+
+.rg-title-case-panel::before {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+
+    background:
+        repeating-linear-gradient(
+            28deg,
+            rgb(242 231 213 / 1.7%) 0,
+            rgb(242 231 213 / 1.7%) 1px,
+            transparent 1px,
+            transparent 8px
+        ),
+        repeating-linear-gradient(
+            152deg,
+            rgb(242 231 213 / 1.1%) 0,
+            rgb(242 231 213 / 1.1%) 1px,
+            transparent 1px,
+            transparent 12px
+        ),
+        radial-gradient(
+            circle at 82% 18%,
+            rgb(109 143 168 / 5%) 0 1px,
+            transparent 1.5px
+        );
+
+    background-size:
+        auto,
+        auto,
+        17px 17px;
+
+    opacity: 0.68;
+
+    content: "";
+}
+
+.rg-title-case-panel::after {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(100deg, transparent 0 58%, rgb(0 0 0 / 28%) 82%),
+        radial-gradient(
+            ellipse at center,
+            transparent 44%,
+            rgb(0 0 0 / 25%) 100%
+        );
+
+    content: "";
+}
+
+.rg-wordmark {
+    text-shadow:
+        1px 2px 0 rgb(79 49 20 / 58%),
+        0.35rem 0.5rem 1rem rgb(0 0 0 / 28%);
+}
+
+/** Dark panel texture: directional lamp glow plus subtle crosshatching. */
+.rg-surface-grit {
+    background-image:
+        radial-gradient(
+            circle at top left,
+            rgb(214 160 68 / 9%),
+            transparent 18rem
+        ),
+        repeating-linear-gradient(
+            31deg,
+            rgb(255 255 255 / 1.4%) 0,
+            rgb(255 255 255 / 1.4%) 1px,
+            transparent 1px,
+            transparent 9px
+        ),
+        repeating-linear-gradient(
+            149deg,
+            rgb(255 255 255 / 0.8%) 0,
+            rgb(255 255 255 / 0.8%) 1px,
+            transparent 1px,
+            transparent 13px
+        );
+}

@@ -1,0 +1,306 @@
+/**
+ * ReleaseGuard folder-stock material and folder-specific interaction.
+ *
+ * This file owns the composed folder shell, folder tab/body stock treatment,
+ * and pull-label movement that only makes sense when attached to a folder.
+ * Generic button/control presentation remains in component-styles/controls.css.
+ */
+
+/**
+ * Composed folder shell.
+ *
+ * The tab and body are siblings. Their width is owned by the shell so compact
+ * shift folders and wide briefing folders keep believable proportions.
+ */
+.rg-folder-shell {
+    --rg-folder-tab-width: clamp(9rem, 34%, 15rem);
+    --rg-folder-tab-height: 1.75rem;
+
+    position: relative;
+    isolation: isolate;
+
+    padding-top: calc(var(--rg-folder-tab-height) - 1px);
+}
+
+.rg-folder-shell--compact {
+    --rg-folder-tab-width: clamp(9rem, 34%, 15rem);
+    --rg-folder-tab-height: 1.75rem;
+}
+
+.rg-folder-shell--wide {
+    --rg-folder-tab-width: clamp(17rem, 32%, 32rem);
+    --rg-folder-tab-height: 2.05rem;
+}
+
+.rg-folder-tab {
+    position: absolute;
+    top: 0;
+    left: clamp(1rem, 3.5%, 1.75rem);
+    z-index: 0;
+
+    display: flex;
+    width: var(--rg-folder-tab-width);
+    height: var(--rg-folder-tab-height);
+    align-items: center;
+
+    padding-inline: 1rem 1.9rem;
+
+    border: 1px solid rgb(73 45 24 / 84%);
+    border-bottom: 0;
+
+    background:
+        radial-gradient(
+            circle at 22% 30%,
+            rgb(231 181 105 / 14%),
+            transparent 42%
+        ),
+        linear-gradient(145deg, rgb(193 132 69) 0%, rgb(145 82 42) 100%);
+
+    clip-path: polygon(0 0, 84% 0, 100% 100%, 0 100%);
+
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 11%),
+        0.35rem 0.55rem 1rem rgb(40 20 10 / 21%);
+}
+
+.rg-folder-tab::after {
+    position: absolute;
+    right: 12%;
+    bottom: 0.28rem;
+    left: 0.8rem;
+
+    height: 1px;
+
+    background: rgb(69 38 20 / 17%);
+
+    content: "";
+}
+
+.rg-folder-tab-text {
+    overflow: hidden;
+
+    font-family: var(--font-case);
+    font-size: clamp(0.76rem, 0.72rem + 0.08vw, 0.84rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.07em;
+
+    color: rgb(43 25 14 / 84%);
+
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/**
+ * Coarse folder stock.
+ *
+ * Broad mottling and a few large fibres replace the previous field of narrow
+ * repeated vertical stripes.
+ */
+.rg-folder-body {
+    position: relative;
+    z-index: 1;
+
+    overflow: hidden;
+
+    border: 1px solid rgb(73 45 24 / 92%);
+    border-radius: 0.25rem 0.8rem 0.8rem 0.8rem;
+
+    background:
+        radial-gradient(
+            circle at 16% 11%,
+            rgb(224 162 91 / 12%),
+            transparent 34%
+        ),
+        radial-gradient(
+            circle at 76% 82%,
+            rgb(47 22 11 / 12%),
+            transparent 42%
+        ),
+        linear-gradient(
+            103deg,
+            transparent 0 24%,
+            rgb(78 39 20 / 4%) 39%,
+            transparent 55%
+        ),
+        linear-gradient(
+            19deg,
+            transparent 0 57%,
+            rgb(245 199 121 / 3.5%) 68%,
+            transparent 78%
+        ),
+        linear-gradient(
+            145deg,
+            rgb(166 107 56) 0%,
+            rgb(126 70 37) 58%,
+            rgb(82 41 23) 100%
+        );
+
+    box-shadow:
+        var(--rg-shadow-object),
+        inset 0 1px 0 rgb(255 255 255 / 11%),
+        inset -0.7rem -0.9rem 1.7rem rgb(49 24 12 / 15%);
+}
+
+.rg-folder-body::before {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            87deg,
+            transparent 0 10%,
+            rgb(52 27 14 / 4%) 10.4%,
+            transparent 11%
+        ),
+        linear-gradient(
+            94deg,
+            transparent 0 62%,
+            rgb(236 186 111 / 3%) 62.5%,
+            transparent 63%
+        ),
+        radial-gradient(
+            circle at 87% 19%,
+            rgb(239 193 121 / 5%),
+            transparent 19%
+        );
+
+    content: "";
+}
+
+.rg-folder-body::after {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    pointer-events: none;
+
+    background:
+        linear-gradient(
+            90deg,
+            rgb(255 255 255 / 3%),
+            transparent 17%,
+            transparent 80%,
+            rgb(38 18 8 / 18%)
+        ),
+        linear-gradient(180deg, transparent 76%, rgb(38 18 8 / 8%));
+
+    content: "";
+}
+
+.rg-folder-body > * {
+    position: relative;
+    z-index: 1;
+}
+
+.rg-folder-interactive .rg-folder-tab,
+.rg-folder-interactive .rg-folder-body {
+    will-change: transform;
+
+    transition:
+        transform var(--rg-motion-object) var(--rg-ease-out),
+        box-shadow var(--rg-motion-object) var(--rg-ease-out),
+        filter var(--rg-motion-object) var(--rg-ease-out);
+}
+
+.rg-folder-interactive:hover .rg-folder-tab {
+    transform: translate3d(0, -0.25rem, 0);
+    filter: brightness(1.045);
+}
+
+.rg-folder-interactive:hover .rg-folder-body {
+    transform: translate3d(0, -0.18rem, 0);
+
+    filter: brightness(1.025);
+
+    box-shadow:
+        0.75rem 1rem 2rem rgb(0 0 0 / 29%),
+        1.6rem 2rem 4rem rgb(0 0 0 / 29%),
+        inset 0 1px 0 rgb(255 255 255 / 12%),
+        inset -0.7rem -0.9rem 1.7rem rgb(49 24 12 / 15%);
+}
+
+.rg-folder-interactive:active .rg-folder-tab {
+    transform: translate3d(0, -0.08rem, 0);
+}
+
+.rg-folder-interactive:active .rg-folder-body {
+    transform: translate3d(0, -0.03rem, 0);
+}
+
+/**
+ * Folder-specific pull label.
+ *
+ * This is a control attached to the object, not a generic raised game button.
+ */
+.rg-folder-action {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+
+    padding: 0.25rem 0.1rem 0.35rem 0.82rem;
+
+    border-bottom: 2px solid rgb(214 160 68 / 64%);
+
+    color: rgb(244 224 188);
+
+    font-family: var(--font-sans);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1;
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out),
+        text-shadow var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-folder-action::before {
+    position: absolute;
+    top: 0.12rem;
+    bottom: 0.25rem;
+    left: 0;
+
+    width: 3px;
+
+    background: var(--color-rg-amber);
+
+    content: "";
+
+    transition: width var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-folder-action-arrow {
+    display: inline-block;
+
+    transition: transform var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-folder-interactive:hover .rg-folder-action {
+    transform: translate3d(2px, 0, 0);
+
+    border-color: rgb(230 184 91 / 92%);
+
+    color: rgb(255 236 196);
+
+    text-shadow: 0 0 0.8rem rgb(214 160 68 / 18%);
+}
+
+.rg-folder-interactive:hover .rg-folder-action::before {
+    width: 4px;
+}
+
+.rg-folder-interactive:hover .rg-folder-action-arrow {
+    transform: translateX(3px);
+}
+
+.rg-folder-interactive:active .rg-folder-action {
+    transform: translate3d(1px, 1px, 0);
+}

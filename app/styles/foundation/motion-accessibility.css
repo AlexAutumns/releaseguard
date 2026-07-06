@@ -1,0 +1,82 @@
+/**
+ * ReleaseGuard reduced-motion adaptation.
+ *
+ * Full motion is the default ReleaseGuard presentation. The physical interface
+ * relies on restrained spatial movement to communicate folder, paper, control,
+ * scene, and notification behaviour.
+ *
+ * Reduced motion is an explicit alternate accessibility mode selected by
+ * applying `data-rg-motion="reduced"` to the root HTML element.
+ *
+ * This stylesheet adapts existing motion contracts. It must not redefine or
+ * strengthen normal/full motion; normal motion remains owned by the relevant
+ * foundation, material, and component stylesheets.
+ */
+
+@keyframes rg-reduced-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/**
+ * Explicit reduced-motion mode.
+ *
+ * No data attribute and `data-rg-motion="full"` both use the normal ReleaseGuard
+ * motion language because the adaptations below only match the reduced value.
+ */
+html[data-rg-motion="reduced"] {
+    scroll-behavior: auto !important;
+}
+
+html[data-rg-motion="reduced"] .rg-control,
+html[data-rg-motion="reduced"] .rg-control-arrow,
+html[data-rg-motion="reduced"] .rg-folder-interactive .rg-folder-tab,
+html[data-rg-motion="reduced"] .rg-folder-interactive .rg-folder-body,
+html[data-rg-motion="reduced"] .rg-folder-action,
+html[data-rg-motion="reduced"] .rg-folder-action::before,
+html[data-rg-motion="reduced"] .rg-folder-action-arrow,
+html[data-rg-motion="reduced"] .rg-lift-transition {
+    transition-duration: 120ms !important;
+}
+
+html[data-rg-motion="reduced"] .rg-control:hover,
+html[data-rg-motion="reduced"] .rg-control:active,
+html[data-rg-motion="reduced"] .rg-control:hover .rg-control-arrow,
+html[data-rg-motion="reduced"] .rg-folder-interactive:hover .rg-folder-tab,
+html[data-rg-motion="reduced"] .rg-folder-interactive:hover .rg-folder-body,
+html[data-rg-motion="reduced"] .rg-folder-interactive:active .rg-folder-tab,
+html[data-rg-motion="reduced"] .rg-folder-interactive:active .rg-folder-body,
+html[data-rg-motion="reduced"] .rg-folder-interactive:hover .rg-folder-action,
+html[data-rg-motion="reduced"] .rg-folder-interactive:active .rg-folder-action,
+html[data-rg-motion="reduced"]
+    .rg-folder-interactive:hover
+    .rg-folder-action-arrow,
+html[data-rg-motion="reduced"] .rg-paper-lift,
+html[data-rg-motion="reduced"] .rg-press-active {
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"] .rg-control--primary::after {
+    display: none;
+}
+
+html[data-rg-motion="reduced"] .rg-scene-enter,
+html[data-rg-motion="reduced"] .rg-folder-enter,
+html[data-rg-motion="reduced"] .rg-sheet-enter,
+html[data-rg-motion="reduced"] .rg-folder-sheet-stack > *,
+html[data-rg-motion="reduced"] .rg-notification-enter,
+html[data-rg-motion="reduced"] .rg-notification-leave {
+    animation: rg-reduced-fade 160ms ease-out both !important;
+
+    animation-delay: 0ms !important;
+}
+
+html[data-rg-motion="reduced"]::view-transition-old(root),
+html[data-rg-motion="reduced"]::view-transition-new(root) {
+    animation: rg-reduced-fade 160ms ease-out both !important;
+}

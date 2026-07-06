@@ -1,0 +1,164 @@
+/**
+ * ReleaseGuard desk-wood material.
+ *
+ * This file owns the shared graphic-noir wood surface used by large desk
+ * backgrounds. The material should immediately read as dark stained walnut
+ * rather than a flat brown panel, photographic texture, illustrated hatch
+ * field, or cartoon plank wall.
+ *
+ * Major grain, seams, and knot suggestions are anchored to the complete element
+ * surface. Distinctive wood features must not repeat as a small texture tile.
+ */
+
+/**
+ * Stylised dark walnut / stained case-desk surface.
+ *
+ * The grain primarily travels from left to right, matching the broad reading
+ * direction of a desk surface. Long elliptical sweeps and sparse horizontal
+ * seams suggest flowing wood grain without drawing literal planks.
+ *
+ * The surrounding ReleaseGuard scene already owns graphic-noir crosshatching.
+ * Wood deliberately does not repeat that high-frequency texture because the
+ * material itself must remain the strongest visual cue.
+ */
+.rg-wood-texture {
+    background-color: var(--color-rg-wood-dark);
+
+    background-image:
+        /**
+         * Soft upper-left desk-lamp warmth.
+         *
+         * This is intentionally much weaker than the previous pass. It provides
+         * a shared lighting direction without turning the full desk into a
+         * left-to-right orange-to-black gradient.
+         */
+        radial-gradient(
+            ellipse 52% 34% at 16% 7%,
+            rgb(214 160 68 / 7%),
+            transparent 72%
+        ),
+        /**
+         * Primary knot suggestion.
+         *
+         * A restrained oval ring sits in the upper-right area. The feature is
+         * large enough to break the flat surface but quiet enough that folders
+         * and papers remain the visual priority.
+         */
+        radial-gradient(
+                ellipse 8rem 2.7rem at 76% 24%,
+                rgb(17 6 4 / 5%) 0 17%,
+                transparent 19% 40%,
+                rgb(13 5 3 / 18%) 43% 46%,
+                transparent 49% 60%,
+                rgb(125 58 31 / 9%) 63% 67%,
+                transparent 70%
+            ),
+        /**
+         * Quiet secondary knot / compressed grain feature.
+         *
+         * The lower-left mark is smaller and weaker so the desk does not develop
+         * a repeating decorative-knot rhythm.
+         */
+        radial-gradient(
+                ellipse 5.5rem 1.9rem at 17% 72%,
+                transparent 0 35%,
+                rgb(13 5 3 / 12%) 39% 43%,
+                transparent 47% 61%,
+                rgb(121 55 29 / 6%) 65% 69%,
+                transparent 73%
+            ),
+        /**
+         * Upper broad grain sweep.
+         *
+         * A long elliptical ring creates a gently curved grain impression. The
+         * arc is tied to the complete desk width rather than repeating.
+         */
+        radial-gradient(
+                ellipse 86% 16% at 38% 12%,
+                transparent 0 68%,
+                rgb(17 6 4 / 13%) 69.5% 70.5%,
+                transparent 72% 77%,
+                rgb(128 59 31 / 7%) 78.5% 81%,
+                transparent 82.5%
+            ),
+        /**
+         * Centre grain sweep.
+         *
+         * This broader and darker arc carries the main horizontal wood flow
+         * through the centre of the desk.
+         */
+        radial-gradient(
+                ellipse 108% 21% at 57% 43%,
+                transparent 0 66%,
+                rgb(10 4 3 / 15%) 67.5% 68.5%,
+                transparent 70% 76%,
+                rgb(118 52 28 / 8%) 77.5% 80.5%,
+                transparent 82%
+            ),
+        /**
+         * Lower grain sweep.
+         *
+         * A lower arc prevents the wood from becoming a set of perfectly
+         * parallel horizontal lines.
+         */
+        radial-gradient(
+                ellipse 94% 17% at 34% 81%,
+                transparent 0 67%,
+                rgb(12 4 3 / 14%) 68.5% 69.5%,
+                transparent 71% 78%,
+                rgb(130 60 32 / 6%) 79.5% 82%,
+                transparent 83.5%
+            ),
+        /**
+         * Sparse horizontal grain seams.
+         *
+         * These narrow seams provide the clearest immediate wood cue. Their
+         * spacing and width vary so the desk does not resemble planks or ruled
+         * paper.
+         */
+        linear-gradient(
+                180deg,
+                transparent 0 11%,
+                rgb(10 4 3 / 14%) 12.2% 13%,
+                transparent 14.5% 27%,
+                rgb(117 52 28 / 8%) 29.5% 32.5%,
+                transparent 35% 48%,
+                rgb(9 3 2 / 17%) 49.5% 50.4%,
+                transparent 52% 67%,
+                rgb(121 55 29 / 8%) 69.5% 72.5%,
+                transparent 75% 87%,
+                rgb(9 3 2 / 12%) 89% 89.8%,
+                transparent 91.5% 100%
+            ),
+        /**
+         * Slightly displaced secondary grain.
+         *
+         * The tiny angle prevents every seam from being mathematically level,
+         * but the two-degree deviation is intentionally subtle.
+         */
+        linear-gradient(
+                178deg,
+                transparent 0 21%,
+                rgb(18 6 4 / 8%) 22.5% 23.1%,
+                transparent 24.2% 59%,
+                rgb(113 50 27 / 6%) 61.5% 64.5%,
+                transparent 67% 100%
+            ),
+        /**
+         * Continuous walnut base.
+         *
+         * The colour changes mainly from top to bottom and stays inside one
+         * walnut family. This replaces the previous dramatic diagonal
+         * orange-to-near-black sweep.
+         */
+        linear-gradient(
+                180deg,
+                #4a2518 0%,
+                #432116 31%,
+                #3a1b12 67%,
+                #32150f 100%
+            );
+
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}

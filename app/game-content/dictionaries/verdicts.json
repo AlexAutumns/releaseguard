@@ -1,0 +1,22 @@
+[
+    {
+        "id": "ship",
+        "label": "Ship",
+        "description": "The release can proceed without extra blocking action."
+    },
+    {
+        "id": "watch",
+        "label": "Watch",
+        "description": "The release can proceed, but the risk should be monitored after release."
+    },
+    {
+        "id": "hold",
+        "label": "Hold",
+        "description": "Pause the release until the raised concern is reviewed or corrected."
+    },
+    {
+        "id": "block",
+        "label": "Block",
+        "description": "Do not release because the risk is too serious."
+    }
+]

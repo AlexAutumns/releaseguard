@@ -1,15 +1,70 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+@import "./styles/foundation/theme.css";
+@import "./styles/foundation/typography.css";
+@import "./styles/foundation/motion.css";
+
+@import "./styles/materials/scene.css";
+@import "./styles/materials/wood.css";
+@import "./styles/materials/folder.css";
+@import "./styles/materials/paper.css";
+@import "./styles/materials/notebook.css";
+@import "./styles/materials/cork.css";
+@import "./styles/materials/technical.css";
+
+@import "./styles/component-styles/controls.css";
+@import "./styles/component-styles/tags.css";
+@import "./styles/component-styles/screen-register.css";
+@import "./styles/component-styles/scrollbars.css";
+@import "./styles/component-styles/notifications.css";
+
+@import "./styles/foundation/motion-accessibility.css";
+
+/* -------------------------------------------------------------------------- */
+/* Application document contract                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Root document defaults shared by every ReleaseGuard route.
+ *
+ * Keep this section limited to browser/document-level behaviour. Physical
+ * materials, component styles, typography voices, and motion contracts belong
+ * to their dedicated stylesheets.
+ */
+* {
+    box-sizing: border-box;
 }
 
 html,
 body {
-  @apply bg-white dark:bg-gray-950;
+    min-height: 100%;
+    background-color: var(--color-rg-night);
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
-  }
+body {
+    position: relative;
+    min-height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+
+    color: var(--color-rg-text);
+    background-color: transparent;
+
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
 }
