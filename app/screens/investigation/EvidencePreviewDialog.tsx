@@ -187,24 +187,6 @@ export function EvidencePreviewDialog({
 
                                 <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
                                     <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
-                                        Risk Hints
-                                    </dt>
-                                    <dd className="mt-2 flex flex-wrap gap-2">
-                                        {evidenceCard.riskHints.map(
-                                            (riskHint) => (
-                                                <span
-                                                    className="rounded-md border border-rg-folder-dark/45 bg-rg-folder-dark/16 px-2.5 py-1 font-mono text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-rg-folder-dark"
-                                                    key={riskHint}
-                                                >
-                                                    {riskHint}
-                                                </span>
-                                            ),
-                                        )}
-                                    </dd>
-                                </div>
-
-                                <div className="rounded-xl border border-rg-folder-dark/20 bg-rg-paper-strong/35 p-3">
-                                    <dt className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-paper-muted">
                                         Attachments
                                     </dt>
                                     <dd className="mt-1 text-lg font-black leading-6 text-rg-paper-ink">
