@@ -10,6 +10,8 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { loadTicketScoreResult } from "../../features/gameplay/results/ticket-result-storage";
 import type { TicketScoreResult } from "../../features/gameplay/scoring/scoring-types";
 import { TicketResultReport } from "./TicketResultReport";
+import { loadShiftRunByAttemptId } from "../../features/gameplay/shift-run/shift-run-storage";
+import type { ShiftRun } from "../../features/gameplay/shift-run/shift-run-types";
 
 export interface TicketResultScreenProps {
     attemptId: string;
@@ -24,10 +26,16 @@ export interface TicketResultScreenProps {
  */
 export function TicketResultScreen({ attemptId }: TicketResultScreenProps) {
     const [result, setResult] = useState<TicketScoreResult | null>(null);
+    const [shiftRun, setShiftRun] = useState<ShiftRun | null>(null);
     const [hasLoaded, setHasLoaded] = useState(false);
 
     useEffect(() => {
+        setHasLoaded(false);
         setResult(loadTicketScoreResult(attemptId));
+
+        const shiftRunResult = loadShiftRunByAttemptId(attemptId);
+        setShiftRun(shiftRunResult.ok ? shiftRunResult.value : null);
+
         setHasLoaded(true);
     }, [attemptId]);
 
@@ -73,7 +81,7 @@ export function TicketResultScreen({ attemptId }: TicketResultScreenProps) {
         );
     }
 
-    return <TicketResultReport result={result} />;
+    return <TicketResultReport result={result} shiftRun={shiftRun} />;
 }
 
 /**

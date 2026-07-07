@@ -4,6 +4,8 @@ import { FiledReport } from "../../components/report/FiledReport";
 import { buttonClassName } from "../../components/ui/Button";
 import { ScreenShell } from "../../components/ui/ScreenShell";
 import type { TicketScoreResult } from "../../features/gameplay/scoring/scoring-types";
+import { getNextShiftRunTicketId } from "../../features/gameplay/shift-run/shift-run-rules";
+import type { ShiftRun } from "../../features/gameplay/shift-run/shift-run-types";
 import { CaseAssessmentPage } from "./pages/CaseAssessmentPage";
 import { ExceptionsPage } from "./pages/ExceptionsPage";
 import { FiledAssessmentPage } from "./pages/FiledAssessmentPage";
@@ -16,32 +18,76 @@ import {
 
 export interface TicketResultReportProps {
     result: TicketScoreResult;
+    shiftRun: ShiftRun | null;
 }
 
 /** Adapts one saved TicketScoreResult snapshot to the filed report shell. */
-export function TicketResultReport({ result }: TicketResultReportProps) {
+export function TicketResultReport({
+    result,
+    shiftRun,
+}: TicketResultReportProps) {
     const pages = buildTicketResultPages(result);
+    const nextTicketId = shiftRun ? getNextShiftRunTicketId(shiftRun) : null;
+    const hasRunAwarePrimaryAction = Boolean(
+        shiftRun?.completedAt || nextTicketId,
+    );
 
     return (
         <ScreenShell>
             <FiledReport
                 actions={
                     <>
-                        <Link
-                            className={buttonClassName({
-                                variant: "secondary",
-                            })}
-                            to="/desk"
-                        >
-                            Back to Desk
-                        </Link>
+                        {shiftRun?.completedAt ? (
+                            <Link
+                                className={buttonClassName({
+                                    variant: "primary",
+                                })}
+                                to={`/results/shift/${shiftRun.shiftRunId}`}
+                                viewTransition
+                            >
+                                Review Shift
+                            </Link>
+                        ) : nextTicketId ? (
+                            <Link
+                                className={buttonClassName({
+                                    variant: "primary",
+                                })}
+                                to={`/tickets/${result.shiftId}/${nextTicketId}`}
+                                viewTransition
+                            >
+                                Continue Shift
+                            </Link>
+                        ) : (
+                            <Link
+                                className={buttonClassName({
+                                    variant: "primary",
+                                })}
+                                to="/desk"
+                                viewTransition
+                            >
+                                Back to Desk
+                            </Link>
+                        )}
 
                         <Link
                             className={buttonClassName({ variant: "ghost" })}
                             to={`/tickets/${result.shiftId}/${result.ticketId}`}
+                            viewTransition
                         >
                             Review Briefing
                         </Link>
+
+                        {hasRunAwarePrimaryAction && (
+                            <Link
+                                className={buttonClassName({
+                                    variant: "ghost",
+                                })}
+                                to="/desk"
+                                viewTransition
+                            >
+                                Back to Desk
+                            </Link>
+                        )}
                     </>
                 }
                 eyebrow="Filed Ticket Report"
