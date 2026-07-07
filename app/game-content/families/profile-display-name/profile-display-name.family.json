@@ -1,0 +1,8 @@
+{
+    "schemaVersion": 1,
+    "contentType": "ticket-family",
+    "id": "family-profile-display-name",
+    "title": "Profile Display Name Family",
+    "description": "Tickets about profile display-name validation, shared client and server rules, edge-case coverage, and release observability.",
+    "tags": ["account", "testing", "operations"]
+}
