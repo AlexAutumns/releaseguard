@@ -7,11 +7,11 @@ import type {
     ReleaseTicketDefinition,
     ShiftDefinition,
 } from "../../features/content/content-types";
-
-export interface DeskShiftCard {
-    shift: ShiftDefinition;
-    tickets: ReleaseTicketDefinition[];
-}
+import {
+    useDeskController,
+    type DeskShiftCard,
+    type DeskShiftStatus,
+} from "./useDeskController";
 
 export interface DeskScreenProps {
     shiftCards: DeskShiftCard[];
@@ -24,6 +24,8 @@ interface DeskLedgerProps {
 interface DeskShiftFolderProps {
     shift: ShiftDefinition;
     tickets: ReleaseTicketDefinition[];
+    status: DeskShiftStatus;
+    onOpen: () => void;
 }
 
 interface LedgerRowProps {
@@ -34,14 +36,13 @@ interface LedgerRowProps {
 /**
  * Case desk / hub screen.
  *
- * The screen coordinates the physical desk ledger and authored shift folders.
- * It does not own progression logic; open/locked state remains derived from the
- * supplied shift definitions and resolved content.
+ * The screen renders the physical desk ledger and resolved shift folders. Shift
+ * Run loading, sequential unlock state, and folder destinations are coordinated
+ * by the Desk controller rather than being inferred from static content alone.
  */
 export function DeskScreen({ shiftCards }: DeskScreenProps) {
-    const activeShift = shiftCards.find(
-        ({ shift, tickets }) => shift.isUnlockedByDefault && tickets.length > 0,
-    )?.shift;
+    const { activeShift, errorMessage, openShift, resolvedShiftCards } =
+        useDeskController(shiftCards);
 
     return (
         <ScreenShell
@@ -54,7 +55,7 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
                     Back to Title
                 </Link>
             }
-            description="Open an assigned shift file and begin reviewing its release tickets."
+            description="Start, resume, or review an authored release-desk shift."
             eyebrow="Case Desk"
             title="Open Case Files"
         >
@@ -73,8 +74,9 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
                             </h2>
 
                             <p className="rg-body-copy mt-2 max-w-2xl text-base text-rg-muted">
-                                Open an unlocked case folder to review its first
-                                assigned release ticket.
+                                Open a case folder to start its authored ticket
+                                sequence, resume the next incomplete ticket, or
+                                review a closed shift.
                             </p>
                         </div>
 
@@ -84,20 +86,39 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
                         </p>
                     </div>
 
-                    {shiftCards.length === 0 ? (
+                    {errorMessage && (
+                        <div
+                            className="mb-5 border-l-2 border-rg-danger bg-rg-danger/8 px-4 py-3"
+                            role="alert"
+                        >
+                            <p className="rg-technical-label text-rg-danger">
+                                Shift Progression Error
+                            </p>
+
+                            <p className="rg-body-copy mt-2 text-sm text-rg-muted">
+                                {errorMessage}
+                            </p>
+                        </div>
+                    )}
+
+                    {resolvedShiftCards.length === 0 ? (
                         <EmptyState
                             description="The content repository did not return any shifts. Check the content pipeline and validation output."
                             title="No case files available"
                         />
                     ) : (
-                        <div className="grid gap-5 xl:grid-cols-2">
-                            {shiftCards.map(({ shift, tickets }) => (
-                                <DeskShiftFolder
-                                    key={shift.id}
-                                    shift={shift}
-                                    tickets={tickets}
-                                />
-                            ))}
+                        <div className="grid items-stretch gap-5 xl:grid-cols-2">
+                            {resolvedShiftCards.map(
+                                ({ shift, tickets, status }) => (
+                                    <DeskShiftFolder
+                                        key={shift.id}
+                                        onOpen={() => openShift(shift.id)}
+                                        shift={shift}
+                                        status={status}
+                                        tickets={tickets}
+                                    />
+                                ),
+                            )}
                         </div>
                     )}
                 </section>
@@ -108,9 +129,6 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
 
 /**
  * Physical desk ledger displayed beside the active shift folders.
- *
- * Paper copy uses the case-file/typewriter voice. Future progress analytics
- * should only be added after the local progress model exists.
  */
 function DeskLedger({ activeShift }: DeskLedgerProps) {
     return (
@@ -149,8 +167,9 @@ function DeskLedger({ activeShift }: DeskLedgerProps) {
                 </p>
 
                 <p className="rg-document-copy mt-3 text-rg-paper-ink/86">
-                    Start with the earliest unlocked shift. Each shift contains
-                    release tickets selected from the authored content pack.
+                    Start with the earliest unlocked shift. Returning to an open
+                    folder resumes its next incomplete ticket; a closed folder
+                    opens the completed shift report.
                 </p>
             </div>
         </section>
@@ -175,96 +194,140 @@ function LedgerRow({ label, value }: LedgerRowProps) {
 }
 
 /**
- * Renders one shift as a composed physical case folder.
+ * Renders one authored shift as a progression-aware physical case folder.
  *
- * The folder can only navigate when the shift is unlocked and at least one
- * resolved ticket exists.
+ * Every lifecycle state uses the same folder shell structure so available,
+ * locked, in-progress, and completed folders keep matching proportions. An
+ * invisible action layer makes openable folders clickable without changing the
+ * physical folder markup.
  */
-function DeskShiftFolder({ shift, tickets }: DeskShiftFolderProps) {
-    const firstTicket = tickets[0];
-    const hasTicket = Boolean(firstTicket);
-    const canOpen = shift.isUnlockedByDefault && hasTicket;
+function DeskShiftFolder({
+    shift,
+    tickets,
+    status,
+    onOpen,
+}: DeskShiftFolderProps) {
+    const canOpen =
+        status === "available" ||
+        status === "in-progress" ||
+        status === "completed";
 
-    const folderBody = (
-        <div className="rg-folder-body min-h-72 px-5 pb-5 pt-8 text-rg-night">
-            <p className="rg-folder-tab-label text-rg-night/80">
-                Case Folder ·{" "}
-                {shift.isUnlockedByDefault ? "Unlocked" : "Locked"}
-            </p>
-
-            <h3 className="rg-display-heading mt-4 text-3xl text-rg-night">
-                {shift.title}
-            </h3>
-
-            <p className="rg-document-copy mt-2 text-rg-night/88">
-                {shift.subtitle}
-            </p>
-
-            <div className="rg-document-rule mt-5 grid gap-4 pt-4 sm:grid-cols-2">
-                <div>
-                    <p className="rg-document-meta-label text-rg-night/76">
-                        Difficulty Band
-                    </p>
-
-                    <p className="rg-document-meta-value mt-1 text-rg-night/94">
-                        {shift.difficultyBand[0]}–{shift.difficultyBand[1]}
-                    </p>
-                </div>
-
-                <div>
-                    <p className="rg-document-meta-label text-rg-night/76">
-                        Assigned Tickets
-                    </p>
-
-                    <p className="rg-document-meta-value mt-1 text-rg-night/94">
-                        {tickets.length}
-                    </p>
-                </div>
-            </div>
-
-            <div className="mt-6">
-                <span className="rg-folder-action">
-                    {canOpen
-                        ? "Open Folder"
-                        : hasTicket
-                          ? "Folder Locked"
-                          : "No Tickets Assigned"}
-
-                    {canOpen && <span aria-hidden="true">→</span>}
-                </span>
-            </div>
-        </div>
-    );
-
-    const tab = (
-        <div aria-hidden="true" className="rg-folder-tab">
-            <span className="rg-folder-tab-text">
-                Shift {String(shift.sequence).padStart(2, "0")}
-            </span>
-        </div>
-    );
-
-    if (!canOpen || !firstTicket) {
-        return (
-            <article
-                aria-disabled="true"
-                className="rg-folder-shell rg-folder-shell--compact rg-folder-enter block opacity-65"
-            >
-                {tab}
-                {folderBody}
-            </article>
-        );
-    }
+    const folderClassName = [
+        "rg-folder-shell",
+        "rg-folder-shell--compact",
+        "rg-folder-enter",
+        "flex",
+        "h-full",
+        "flex-col",
+        canOpen ? "rg-folder-interactive" : "rg-folder-shell--locked",
+    ].join(" ");
 
     return (
-        <Link
-            aria-label={`Open ${shift.title}`}
-            className="rg-folder-shell rg-folder-shell--compact rg-folder-interactive rg-folder-enter group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rg-amber"
-            to={`/tickets/${shift.id}/${firstTicket.id}`}
-            viewTransition
+        <article
+            aria-disabled={!canOpen || undefined}
+            className={folderClassName}
         >
-            {tab}
-            {folderBody}
-        </Link>
+            <div aria-hidden="true" className="rg-folder-tab">
+                <span className="rg-folder-tab-text">
+                    Shift {String(shift.sequence).padStart(2, "0")}
+                </span>
+            </div>
+
+            <div className="rg-folder-body flex min-h-72 flex-1 flex-col px-5 pb-5 pt-8 text-rg-night">
+                <p className="rg-folder-tab-label text-rg-night/80">
+                    Case Folder · {formatDeskShiftStatus(status)}
+                </p>
+
+                <h3 className="rg-display-heading mt-4 text-3xl text-rg-night">
+                    {shift.title}
+                </h3>
+
+                <p className="rg-document-copy mt-2 text-rg-night/88">
+                    {shift.subtitle}
+                </p>
+
+                <div className="rg-document-rule mt-5 grid gap-4 pt-4 sm:grid-cols-2">
+                    <div>
+                        <p className="rg-document-meta-label text-rg-night/76">
+                            Difficulty Band
+                        </p>
+
+                        <p className="rg-document-meta-value mt-1 text-rg-night/94">
+                            {shift.difficultyBand[0]}–{shift.difficultyBand[1]}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p className="rg-document-meta-label text-rg-night/76">
+                            Assigned Tickets
+                        </p>
+
+                        <p className="rg-document-meta-value mt-1 text-rg-night/94">
+                            {tickets.length}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mt-auto pt-6">
+                    <span aria-hidden="true" className="rg-folder-action">
+                        {getDeskShiftActionLabel(status)}
+
+                        {canOpen && <span aria-hidden="true">→</span>}
+                    </span>
+                </div>
+            </div>
+
+            {canOpen && (
+                <button
+                    aria-label={`${getDeskShiftActionLabel(status)}: ${shift.title}`}
+                    className="absolute inset-0 z-10 cursor-pointer appearance-none rounded-[0.8rem] border-0 bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rg-amber"
+                    onClick={onOpen}
+                    type="button"
+                >
+                    <span className="sr-only">
+                        {getDeskShiftActionLabel(status)}: {shift.title}
+                    </span>
+                </button>
+            )}
+        </article>
     );
+}
+/**
+ * Returns the visible folder state used by the physical shift label.
+ */
+function formatDeskShiftStatus(status: DeskShiftStatus): string {
+    switch (status) {
+        case "checking":
+            return "Checking";
+        case "available":
+            return "Available";
+        case "in-progress":
+            return "In Progress";
+        case "completed":
+            return "Closed";
+        case "locked":
+            return "Locked";
+        case "unavailable":
+            return "Unavailable";
+    }
+}
+
+/**
+ * Returns the folder action associated with one resolved shift state.
+ */
+function getDeskShiftActionLabel(status: DeskShiftStatus): string {
+    switch (status) {
+        case "checking":
+            return "Checking Case File";
+        case "available":
+            return "Open Folder";
+        case "in-progress":
+            return "Resume Shift";
+        case "completed":
+            return "Review Shift";
+        case "locked":
+            return "Folder Locked";
+        case "unavailable":
+            return "Progress Unavailable";
+    }
 }
