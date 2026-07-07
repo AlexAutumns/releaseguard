@@ -1,0 +1,14 @@
+{
+    "schemaVersion": 1,
+    "contentType": "shift-definition",
+    "id": "shift-02-full-stack-desk",
+    "title": "Full-Stack Desk",
+    "subtitle": "Cross-layer evidence and hidden implementation risk.",
+    "sequence": 2,
+    "difficultyBand": [2, 3],
+    "ticketIds": [
+        "ticket-profile-display-name-limited-coverage",
+        "ticket-user-deletion-admin-button-illusion"
+    ],
+    "isUnlockedByDefault": false
+}

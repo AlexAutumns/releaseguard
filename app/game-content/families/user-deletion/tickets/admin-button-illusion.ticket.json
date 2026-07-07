@@ -1,0 +1,102 @@
+{
+    "schemaVersion": 1,
+    "contentType": "release-ticket",
+    "id": "ticket-user-deletion-admin-button-illusion",
+    "familyId": "family-user-deletion",
+    "baselineReferenceId": "reference-user-deletion-baseline",
+    "variantKind": "risk-variant",
+    "title": "Admin Button Illusion",
+    "productArea": "User Management",
+    "difficulty": 3,
+    "briefing": "The administration team is preparing a user-deletion update. QA confirmed that the delete action is hidden from standard users and visible to administrators. Review the implementation and release evidence before deciding whether the destructive action is safe to release.",
+    "tags": ["security", "testing", "account"],
+    "correctVerdict": "block",
+    "introducedIssues": [
+        {
+            "id": "issue-missing-server-deletion-authorization",
+            "referenceArtifactId": "ref-server-side-deletion-authorization",
+            "expectedFindingIds": [
+                "finding-missing-server-deletion-authorization"
+            ],
+            "category": "security",
+            "severity": "critical",
+            "summary": "The destructive user-deletion route requires an authenticated session but does not enforce the administrator permission promised by the interface and release note."
+        },
+        {
+            "id": "issue-missing-deletion-authorization-tests",
+            "referenceArtifactId": "ref-deletion-authorization-testing",
+            "expectedFindingIds": [
+                "finding-missing-deletion-authorization-tests"
+            ],
+            "category": "testing",
+            "severity": "high",
+            "summary": "QA verified role-based button visibility but did not send the deletion request as a non-administrator to prove the server rejects the action."
+        }
+    ],
+    "evidenceCards": [
+        {
+            "id": "ev-user-deletion-qa",
+            "type": "qa-note",
+            "title": "QA Role Visibility Note",
+            "source": "QA Tester",
+            "body": "The Delete User action is visible for administrator accounts and hidden for standard accounts. Administrator deletion completed successfully in the test environment. The test pass covered role visibility and the administrator happy path; QA did not call the deletion endpoint directly while signed in as a standard user.",
+            "riskHints": ["security", "testing"]
+        },
+        {
+            "id": "ev-user-deletion-dev",
+            "type": "pull-request-comment",
+            "title": "Developer Authorization Comment",
+            "source": "Pull Request Discussion",
+            "body": "The administration page already hides the delete control for non-admin users. The route uses the normal authenticated-session middleware, and the controller records the acting account in the existing audit log after a deletion succeeds.",
+            "riskHints": ["security", "testing"],
+            "attachments": [
+                {
+                    "id": "attachment-user-deletion-route",
+                    "type": "code",
+                    "language": "ts",
+                    "title": "User deletion route",
+                    "body": "router.delete(\n  \"/api/admin/users/:userId\",\n  requireSession,\n  async (request, response) => {\n    const targetUser = await userRepository.findById(\n      request.params.userId,\n    );\n\n    if (!targetUser) {\n      return response.status(404).json({ error: \"user-not-found\" });\n    }\n\n    await userRepository.delete(targetUser.id);\n    await auditLog.record({\n      action: \"user-deleted\",\n      actorUserId: request.session.userId,\n      targetUserId: targetUser.id,\n    });\n\n    return response.status(204).end();\n  },\n);"
+                }
+            ]
+        },
+        {
+            "id": "ev-user-deletion-support",
+            "type": "support-ticket",
+            "title": "Deletion Support Summary",
+            "source": "Support Desk",
+            "body": "Support has no confirmed reports of standard users deleting other accounts. Recent user-management requests concern administrators asking for clearer confirmation text before destructive actions; no missing audit records were reported during the review period.",
+            "riskHints": ["quality", "operations"]
+        },
+        {
+            "id": "ev-user-deletion-release",
+            "type": "release-note",
+            "title": "User Deletion Release Note",
+            "source": "Release Manager",
+            "body": "Adds an administrator-only user deletion action to the user-management screen. The release note states that deletion is restricted to administrators and that successful actions continue to be written to the existing administrative audit log.",
+            "riskHints": ["security", "operations"]
+        }
+    ],
+    "expectedFindings": [
+        {
+            "id": "finding-missing-server-deletion-authorization",
+            "category": "security",
+            "summary": "The deletion route checks for an authenticated session but does not enforce administrator authorization on the server before deleting a user.",
+            "requiredEvidenceIds": [
+                "ev-user-deletion-qa",
+                "ev-user-deletion-dev"
+            ],
+            "severity": "critical"
+        },
+        {
+            "id": "finding-missing-deletion-authorization-tests",
+            "category": "testing",
+            "summary": "The QA pass verifies interface visibility and the administrator happy path but does not test that the deletion endpoint rejects a standard-user request.",
+            "requiredEvidenceIds": ["ev-user-deletion-qa"],
+            "severity": "high"
+        }
+    ],
+    "authoring": {
+        "status": "draft",
+        "notes": "Difficulty-3 BLOCK ticket about UI visibility versus server authorization. The audit trail remains intact; the release is blocked by the missing server-side administrator check and the missing denied-role endpoint test, not by unrelated extra failures."
+    }
+}
