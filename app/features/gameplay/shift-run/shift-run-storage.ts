@@ -176,6 +176,58 @@ export function loadShiftRunByAttemptId(
 }
 
 /**
+ * Replaces the complete persisted Shift Run collection with one validated set.
+ *
+ * The collection is stored under one localStorage key, so the browser write is
+ * atomic at the Shift Run domain boundary. Cross-domain save replacement is
+ * coordinated separately by the portable-save storage layer.
+ */
+export function replaceShiftRuns(
+    shiftRuns: ShiftRun[],
+): ShiftRunStorageResult<ShiftRun[]> {
+    const storage = getBrowserLocalStorage();
+
+    if (!storage) {
+        return {
+            ok: false,
+            message:
+                "Shift Run storage is not available in this browser session.",
+        };
+    }
+
+    if (
+        !shiftRuns.every(isShiftRun) ||
+        !hasValidShiftRunCollectionIntegrity(shiftRuns)
+    ) {
+        return {
+            ok: false,
+            message:
+                "Shift Run replacement was rejected because the snapshot contains malformed or conflicting progression records.",
+        };
+    }
+
+    try {
+        const storedCollection: StoredShiftRunCollection = {
+            schemaVersion: 1,
+            shiftRuns: [...shiftRuns],
+        };
+
+        storage.setItem(shiftRunStorageKey, JSON.stringify(storedCollection));
+
+        return {
+            ok: true,
+            value: [...shiftRuns],
+        };
+    } catch {
+        return {
+            ok: false,
+            message:
+                "Shift Runs could not be replaced. Browser storage may be full or restricted.",
+        };
+    }
+}
+
+/**
  * Saves one Shift Run while preserving replay-ready historical completed runs.
  *
  * Existing records with the same Shift Run ID are replaced. Multiple completed
