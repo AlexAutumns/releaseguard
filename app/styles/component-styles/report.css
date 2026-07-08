@@ -755,6 +755,50 @@
     font-size: clamp(0.88rem, 0.84rem + 0.07cqi, 0.97rem);
 }
 
+/**
+ * Quiet drill-down action used by report ledger records.
+ *
+ * The link remains part of the typed paper record rather than borrowing the
+ * dark desk-control treatment used by global route actions.
+ */
+.rg-report-ledger-action {
+    display: flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.35rem;
+
+    margin-top: 0.5rem;
+    padding-bottom: 0.08rem;
+
+    border-bottom: 1px solid rgb(79 52 31 / 46%);
+
+    color: rgb(67 43 27 / 88%);
+
+    font-family: var(--font-case);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.045em;
+    text-decoration: none;
+    text-transform: uppercase;
+
+    transition:
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out),
+        transform var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-report-ledger-action:hover,
+.rg-report-ledger-action:focus-visible {
+    border-bottom-color: rgb(79 52 31 / 88%);
+    color: rgb(47 29 18);
+    transform: translateX(2px);
+}
+
+.rg-report-ledger-action:focus-visible {
+    outline: 2px solid rgb(154 100 45 / 72%);
+    outline-offset: 3px;
+}
+
 .rg-report-ledger--scoring
     .rg-report-ledger-row
     > dd:not(.rg-report-ledger-description),

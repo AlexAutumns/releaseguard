@@ -11,6 +11,7 @@ import type { ShiftRun } from "../../features/gameplay/shift-run/shift-run-types
 
 /** One submitted ticket row shown in the Shift Result ticket register. */
 export interface ShiftTicketRegisterRecord {
+    attemptId: string;
     ticketId: string;
     ticketTitle: string;
     totalScore: number;
@@ -131,6 +132,7 @@ export function buildShiftResultPages({
             kind: "ticket-register",
             label: "Tickets",
             tickets: ticketResults.map((result) => ({
+                attemptId: result.attemptId,
                 ticketId: result.ticketId,
                 ticketTitle: result.ticketTitle,
                 totalScore: result.totalScore,

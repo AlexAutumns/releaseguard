@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import type { TicketRegisterPageDescriptor } from "../shift-result-pages";
 import {
     formatShiftScore,
@@ -10,6 +12,9 @@ export interface TicketRegisterPageProps {
 
 /**
  * Lists every immutable Ticket Result owned by the completed Shift Run.
+ *
+ * Each register row remains a compact shift-level summary while linking to the
+ * full saved Ticket Result for detailed findings, evidence, and exceptions.
  */
 export function TicketRegisterPage({ page }: TicketRegisterPageProps) {
     return (
@@ -56,6 +61,14 @@ export function TicketRegisterPage({ page }: TicketRegisterPageProps) {
                                 ? "matched"
                                 : "did not match"}
                             .
+                            <Link
+                                className="rg-report-ledger-action"
+                                to={`/results/ticket/${ticket.attemptId}`}
+                                viewTransition
+                            >
+                                Open Ticket Report
+                                <span aria-hidden="true">→</span>
+                            </Link>
                         </dd>
                     </div>
                 ))}
