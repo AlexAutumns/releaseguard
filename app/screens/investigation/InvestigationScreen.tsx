@@ -14,6 +14,8 @@ import { Button, buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Panel } from "../../components/ui/Panel";
 
+import { Archive, NotebookTabs } from "lucide-react";
+
 import type {
     FamilyReferenceDefinition,
     ReleaseTicketDefinition,
@@ -260,7 +262,7 @@ function InvestigationWorkspace({
             />
 
             <div
-                className="grid min-h-0 flex-1 gap-2"
+                className="rg-investigation-workspace-grid grid min-h-0 flex-1 gap-2"
                 style={{
                     gridTemplateColumns: getWorkspaceGridColumns({
                         isCabinetOpen,
@@ -268,26 +270,33 @@ function InvestigationWorkspace({
                     }),
                 }}
             >
-                {isCabinetOpen ? (
-                    <EvidenceCabinetPanel
-                        controller={controller}
-                        onCollapse={() => setIsCabinetOpen(false)}
-                        onPinEvidence={pinEvidenceInCurrentBoardView}
-                        ticket={ticket}
-                    />
-                ) : (
-                    <InvestigationRail
-                        icon="▤"
-                        label="Files"
-                        meta={
-                            <Badge tone="cork">
-                                {ticket.evidenceCards.length}
-                            </Badge>
-                        }
-                        onOpen={openCabinet}
-                        side="left"
-                    />
-                )}
+                <div
+                    className="rg-investigation-fold-slot"
+                    data-open={isCabinetOpen ? "true" : "false"}
+                    data-side="left"
+                >
+                    {isCabinetOpen ? (
+                        <EvidenceCabinetPanel
+                            controller={controller}
+                            onCollapse={() => setIsCabinetOpen(false)}
+                            onPinEvidence={pinEvidenceInCurrentBoardView}
+                            ticket={ticket}
+                        />
+                    ) : (
+                        <InvestigationRail
+                            disabled={caseworkDocument.isChangingPage}
+                            icon={Archive}
+                            label="Files"
+                            meta={
+                                <Badge tone="cork">
+                                    {ticket.evidenceCards.length}
+                                </Badge>
+                            }
+                            onOpen={openCabinet}
+                            side="left"
+                        />
+                    )}
+                </div>
 
                 <InvestigationBoardPanel
                     boardViewportRef={boardViewportRef}
@@ -295,29 +304,35 @@ function InvestigationWorkspace({
                     controller={controller}
                 />
 
-                {isCaseworkOpen ? (
-                    <CaseworkPanel
-                        controller={controller}
-                        document={caseworkDocument}
-                        onCollapse={collapseCasework}
-                        onSubmitReport={submitTicketReport}
-                    />
-                ) : (
-                    <InvestigationRail
-                        icon="▥"
-                        label="Casework"
-                        meta={
-                            <Badge tone="warning">
-                                {
-                                    controller.attempt.present.findings
-                                        .filedFindings.length
-                                }
-                            </Badge>
-                        }
-                        onOpen={openCasework}
-                        side="right"
-                    />
-                )}
+                <div
+                    className="rg-investigation-fold-slot"
+                    data-open={isCaseworkOpen ? "true" : "false"}
+                    data-side="right"
+                >
+                    {isCaseworkOpen ? (
+                        <CaseworkPanel
+                            controller={controller}
+                            document={caseworkDocument}
+                            onCollapse={collapseCasework}
+                            onSubmitReport={submitTicketReport}
+                        />
+                    ) : (
+                        <InvestigationRail
+                            icon={NotebookTabs}
+                            label="Casework"
+                            meta={
+                                <Badge tone="warning">
+                                    {
+                                        controller.attempt.present.findings
+                                            .filedFindings.length
+                                    }
+                                </Badge>
+                            }
+                            onOpen={openCasework}
+                            side="right"
+                        />
+                    )}
+                </div>
             </div>
 
             <InvestigationToolRack
@@ -359,14 +374,21 @@ interface WorkspaceGridColumnsInput {
 }
 
 /**
- * Returns the workspace grid columns for the current drawer state.
+ * Returns fluid, capped workspace columns for the current drawer state.
+ *
+ * Open side furniture narrows on laptop-sized viewports and caps on wider
+ * desktops so the Board receives additional horizontal space. Collapsed work
+ * areas keep the existing narrow spine width.
  */
 function getWorkspaceGridColumns({
     isCabinetOpen,
     isCaseworkOpen,
 }: WorkspaceGridColumnsInput): string {
-    const cabinetColumn = isCabinetOpen ? "minmax(320px, 390px)" : "48px";
-    const caseworkColumn = isCaseworkOpen ? "minmax(420px, 520px)" : "48px";
+    const cabinetColumn = isCabinetOpen ? "clamp(17rem, 24vw, 24rem)" : "48px";
+
+    const caseworkColumn = isCaseworkOpen
+        ? "clamp(20rem, 31vw, 32.5rem)"
+        : "48px";
 
     return `${cabinetColumn} minmax(0, 1fr) ${caseworkColumn}`;
 }
@@ -397,7 +419,11 @@ function EvidenceCabinetPanel({
     ticket,
 }: EvidenceCabinetPanelProps) {
     return (
-        <Panel className="h-full min-h-0" padding="sm" tone="folder">
+        <Panel
+            className="rg-investigation-major-object h-full min-h-0"
+            padding="sm"
+            tone="folder"
+        >
             <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-3 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
                     <div className="min-w-0">
@@ -535,7 +561,11 @@ interface InvestigationBoardPanelProps {
 }
 
 /**
- * Main cork board area.
+ * Main Board viewport and larger logical cork-board world.
+ *
+ * The visible viewport accepts the height provided by the Investigation
+ * workspace. The logical Board remains larger than that viewport and Pan
+ * controls which part of the world is currently visible.
  */
 function InvestigationBoardPanel({
     boardViewportRef,
@@ -725,7 +755,11 @@ function InvestigationBoardPanel({
     };
 
     return (
-        <Panel className="h-full min-h-0" padding="sm" tone="cork">
+        <Panel
+            className="rg-investigation-major-object h-full min-h-0"
+            padding="sm"
+            tone="cork"
+        >
             <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -768,15 +802,15 @@ function InvestigationBoardPanel({
                     </div>
                 </div>
 
-                <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-rg-paper-strong/28 bg-rg-cork-dark/20">
+                <div className="rg-investigation-board-frame relative min-h-0 flex-1 overflow-hidden border border-rg-paper-strong/28 bg-rg-cork-dark/20">
                     <div className="absolute inset-0 opacity-70">
                         <div className="rg-cork-grain h-full w-full" />
                     </div>
 
-                    <div className="relative z-10 h-full min-h-[420px] p-2">
+                    <div className="relative z-10 h-full min-h-0 p-2">
                         <div
                             className={cn(
-                                "relative h-full touch-none overflow-hidden rounded-xl border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20",
+                                "rg-investigation-board-viewport relative h-full touch-none overflow-hidden border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20",
                                 activeTool === "pan"
                                     ? "cursor-grab active:cursor-grabbing"
                                     : "",
@@ -979,7 +1013,11 @@ function CaseworkPanel({
     };
 
     return (
-        <Panel className="h-full min-h-0" padding="sm" tone="notepad">
+        <Panel
+            className="rg-investigation-major-object h-full min-h-0"
+            padding="sm"
+            tone="notepad"
+        >
             <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-2 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
                     <div className="min-w-0">

@@ -76,6 +76,20 @@ html[data-rg-motion="reduced"] .rg-notification-leave {
     animation-delay: 0ms !important;
 }
 
+/**
+ * Investigation side folds keep the same open/closed state in reduced motion
+ * while replacing spatial furniture travel with a short fade.
+ */
+html[data-rg-motion="reduced"] .rg-investigation-workspace-grid {
+    transition-duration: 120ms !important;
+}
+
+html[data-rg-motion="reduced"] .rg-investigation-major-object,
+html[data-rg-motion="reduced"] .rg-investigation-rail {
+    animation: rg-reduced-fade 120ms ease-out both !important;
+    transform: none !important;
+}
+
 html[data-rg-motion="reduced"]::view-transition-old(root),
 html[data-rg-motion="reduced"]::view-transition-new(root) {
     animation: rg-reduced-fade 160ms ease-out both !important;
