@@ -1,10 +1,17 @@
+import {
+    getIncompleteShiftRun,
+    getIncompleteShiftRunByShiftId,
+    getLatestCompletedShiftRunByShiftId,
+    getShiftRunsByShiftId,
+    isShiftRunComplete,
+} from "./shift-run-rules";
 import type { ShiftRun } from "./shift-run-types";
 
 /**
  * Browser storage key for the complete persisted Shift Run collection.
  *
- * The July checkpoint stores all runs in one small collection so Shift Run
- * lookups can scan one source of truth instead of maintaining duplicate indexes.
+ * All runs remain in one small collection so progression and historical report
+ * lookups can scan one source of truth without maintaining duplicate indexes.
  */
 const shiftRunStorageKey = "releaseguard:shift-runs";
 
@@ -76,9 +83,43 @@ export function loadShiftRunById(
 }
 
 /**
- * Loads the single July-checkpoint Shift Run owned by one authored shift.
+ * Loads every historical Shift Run for one authored shift.
  */
-export function loadShiftRunByShiftId(
+export function loadShiftRunsByShiftId(
+    shiftId: string,
+): ShiftRunStorageResult<ShiftRun[]> {
+    const result = loadShiftRuns();
+
+    if (!result.ok) {
+        return result;
+    }
+
+    return {
+        ok: true,
+        value: getShiftRunsByShiftId(result.value, shiftId),
+    };
+}
+
+/**
+ * Loads the single globally active incomplete Shift Run when one exists.
+ */
+export function loadIncompleteShiftRun(): ShiftRunStorageResult<ShiftRun | null> {
+    const result = loadShiftRuns();
+
+    if (!result.ok) {
+        return result;
+    }
+
+    return {
+        ok: true,
+        value: getIncompleteShiftRun(result.value),
+    };
+}
+
+/**
+ * Loads the incomplete Shift Run for one authored shift when it exists.
+ */
+export function loadIncompleteShiftRunByShiftId(
     shiftId: string,
 ): ShiftRunStorageResult<ShiftRun | null> {
     const result = loadShiftRuns();
@@ -89,14 +130,30 @@ export function loadShiftRunByShiftId(
 
     return {
         ok: true,
-        value:
-            result.value.find((shiftRun) => shiftRun.shiftId === shiftId) ??
-            null,
+        value: getIncompleteShiftRunByShiftId(result.value, shiftId),
     };
 }
 
 /**
- * Resolves the Shift Run that owns one submitted Ticket Result attempt.
+ * Loads the newest completed historical run for one authored shift.
+ */
+export function loadLatestCompletedShiftRunByShiftId(
+    shiftId: string,
+): ShiftRunStorageResult<ShiftRun | null> {
+    const result = loadShiftRuns();
+
+    if (!result.ok) {
+        return result;
+    }
+
+    return {
+        ok: true,
+        value: getLatestCompletedShiftRunByShiftId(result.value, shiftId),
+    };
+}
+
+/**
+ * Resolves the exact Shift Run that owns one submitted Ticket Result attempt.
  */
 export function loadShiftRunByAttemptId(
     attemptId: string,
@@ -119,11 +176,11 @@ export function loadShiftRunByAttemptId(
 }
 
 /**
- * Saves one Shift Run without creating a second progression run for its shift.
+ * Saves one Shift Run while preserving replay-ready historical completed runs.
  *
- * Existing records with the same Shift Run ID are replaced. A different run ID
- * for the same shift is rejected because formal replay is outside the July
- * checkpoint and one authored shift has one progression run.
+ * Existing records with the same Shift Run ID are replaced. Multiple completed
+ * runs for one shift are allowed, but the player may have at most one incomplete
+ * run globally so Continue Case always has one unambiguous active checkpoint.
  */
 export function saveShiftRun(
     shiftRun: ShiftRun,
@@ -144,24 +201,37 @@ export function saveShiftRun(
         return collectionResult;
     }
 
-    const conflictingShiftRun = collectionResult.value.find(
-        (item) =>
-            item.shiftId === shiftRun.shiftId &&
-            item.shiftRunId !== shiftRun.shiftRunId,
-    );
-
-    if (conflictingShiftRun) {
-        return {
-            ok: false,
-            message: `Shift "${shiftRun.shiftId}" already has progression run "${conflictingShiftRun.shiftRunId}".`,
-        };
-    }
-
     const nextShiftRuns = collectionResult.value.filter(
         (item) => item.shiftRunId !== shiftRun.shiftRunId,
     );
 
     nextShiftRuns.push(shiftRun);
+
+    const incompleteShiftRuns = nextShiftRuns.filter(
+        (item) => !isShiftRunComplete(item),
+    );
+
+    if (incompleteShiftRuns.length > 1) {
+        const conflictingShiftRun = incompleteShiftRuns.find(
+            (item) => item.shiftRunId !== shiftRun.shiftRunId,
+        );
+
+        return {
+            ok: false,
+            message: conflictingShiftRun
+                ? `Shift Run "${conflictingShiftRun.shiftRunId}" is already in progress. Complete the active shift before starting another run.`
+                : "More than one incomplete Shift Run cannot be saved at the same time.",
+        };
+    }
+
+    const duplicateAttemptId = findDuplicateAttemptId(nextShiftRuns);
+
+    if (duplicateAttemptId) {
+        return {
+            ok: false,
+            message: `Attempt "${duplicateAttemptId}" is already owned by another Shift Run completion record.`,
+        };
+    }
 
     try {
         const storedCollection: StoredShiftRunCollection = {
@@ -229,20 +299,24 @@ function readShiftRunCollection(
 function isStoredShiftRunCollection(
     value: unknown,
 ): value is StoredShiftRunCollection {
-    return (
-        isRecord(value) &&
-        value.schemaVersion === 1 &&
-        Array.isArray(value.shiftRuns) &&
-        value.shiftRuns.every(isShiftRun)
-    );
+    if (
+        !isRecord(value) ||
+        value.schemaVersion !== 1 ||
+        !Array.isArray(value.shiftRuns) ||
+        !value.shiftRuns.every(isShiftRun)
+    ) {
+        return false;
+    }
+
+    return hasValidShiftRunCollectionIntegrity(value.shiftRuns);
 }
 
 /**
  * Runtime shape guard for one persisted Shift Run.
  *
  * This validates the fields required by sequencing and report lookup. Deeper
- * import validation remains a separate responsibility for the later save-file
- * import boundary.
+ * portable-save validation remains a separate responsibility for the later
+ * save-file import boundary.
  */
 function isShiftRun(value: unknown): value is ShiftRun {
     if (!isRecord(value)) {
@@ -266,6 +340,60 @@ function isShiftRun(value: unknown): value is ShiftRun {
         typeof value.startedAt === "string" &&
         (value.completedAt === null || typeof value.completedAt === "string")
     );
+}
+
+/**
+ * Validates collection-level ownership needed by progression and report lookup.
+ */
+function hasValidShiftRunCollectionIntegrity(shiftRuns: ShiftRun[]): boolean {
+    const shiftRunIds = new Set<string>();
+    const attemptIds = new Set<string>();
+    let incompleteShiftRunCount = 0;
+
+    for (const shiftRun of shiftRuns) {
+        if (shiftRunIds.has(shiftRun.shiftRunId)) {
+            return false;
+        }
+
+        shiftRunIds.add(shiftRun.shiftRunId);
+
+        if (!isShiftRunComplete(shiftRun)) {
+            incompleteShiftRunCount += 1;
+
+            if (incompleteShiftRunCount > 1) {
+                return false;
+            }
+        }
+
+        for (const completedAttempt of shiftRun.completedTicketAttempts) {
+            if (attemptIds.has(completedAttempt.attemptId)) {
+                return false;
+            }
+
+            attemptIds.add(completedAttempt.attemptId);
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Finds one attempt ID that appears in more than one Shift Run record.
+ */
+function findDuplicateAttemptId(shiftRuns: ShiftRun[]): string | null {
+    const attemptIds = new Set<string>();
+
+    for (const shiftRun of shiftRuns) {
+        for (const completedAttempt of shiftRun.completedTicketAttempts) {
+            if (attemptIds.has(completedAttempt.attemptId)) {
+                return completedAttempt.attemptId;
+            }
+
+            attemptIds.add(completedAttempt.attemptId);
+        }
+    }
+
+    return null;
 }
 
 /**

@@ -73,6 +73,62 @@ export function isShiftRunComplete(shiftRun: ShiftRun): boolean {
 }
 
 /**
+ * Returns every historical run for one authored shift.
+ */
+export function getShiftRunsByShiftId(
+    shiftRuns: ShiftRun[],
+    shiftId: string,
+): ShiftRun[] {
+    return shiftRuns.filter((shiftRun) => shiftRun.shiftId === shiftId);
+}
+
+/**
+ * Returns the single active incomplete Shift Run when one exists.
+ *
+ * Persisted storage and portable-save validation own the invariant that at most
+ * one incomplete run may exist globally. This selector deliberately returns the
+ * first match rather than inventing conflict recovery.
+ */
+export function getIncompleteShiftRun(shiftRuns: ShiftRun[]): ShiftRun | null {
+    return shiftRuns.find((shiftRun) => !isShiftRunComplete(shiftRun)) ?? null;
+}
+
+/**
+ * Returns the incomplete Shift Run for one authored shift when it exists.
+ */
+export function getIncompleteShiftRunByShiftId(
+    shiftRuns: ShiftRun[],
+    shiftId: string,
+): ShiftRun | null {
+    return (
+        shiftRuns.find(
+            (shiftRun) =>
+                shiftRun.shiftId === shiftId && !isShiftRunComplete(shiftRun),
+        ) ?? null
+    );
+}
+
+/**
+ * Returns the most recently completed historical run for one authored shift.
+ *
+ * Completion timestamps are generated as ISO strings, so lexical ordering keeps
+ * the newest completed checkpoint first. Stable tie-breakers keep the selector
+ * deterministic if two imported records share a timestamp.
+ */
+export function getLatestCompletedShiftRunByShiftId(
+    shiftRuns: ShiftRun[],
+    shiftId: string,
+): ShiftRun | null {
+    const completedShiftRuns = getShiftRunsByShiftId(shiftRuns, shiftId).filter(
+        isShiftRunComplete,
+    );
+
+    completedShiftRuns.sort(compareCompletedShiftRunsNewestFirst);
+
+    return completedShiftRuns[0] ?? null;
+}
+
+/**
  * Records one completed ticket attempt and advances the Shift Run exactly once.
  *
  * The operation is idempotent for the same ticket/attempt pair so a submission
@@ -155,4 +211,28 @@ export function completeShiftRunTicket({
         ],
         completedAt: hasCompletedShift ? completedAt : null,
     });
+}
+
+/**
+ * Orders completed runs from newest to oldest with deterministic tie-breakers.
+ */
+function compareCompletedShiftRunsNewestFirst(
+    left: ShiftRun,
+    right: ShiftRun,
+): number {
+    const completedAtComparison = (right.completedAt ?? "").localeCompare(
+        left.completedAt ?? "",
+    );
+
+    if (completedAtComparison !== 0) {
+        return completedAtComparison;
+    }
+
+    const startedAtComparison = right.startedAt.localeCompare(left.startedAt);
+
+    if (startedAtComparison !== 0) {
+        return startedAtComparison;
+    }
+
+    return right.shiftRunId.localeCompare(left.shiftRunId);
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Button, buttonClassName } from "../../components/ui/Button";
 import { Panel } from "../../components/ui/Panel";
 import { ScreenShell } from "../../components/ui/ScreenShell";
+import { useTitleController } from "./useTitleController";
 
 /**
  * Title screen for ReleaseGuard.
@@ -14,6 +15,8 @@ import { ScreenShell } from "../../components/ui/ScreenShell";
  * - paper content uses the case-file/typewriter voice.
  */
 export function TitleScreen() {
+    const continueCase = useTitleController();
+
     return (
         <ScreenShell>
             <div className="rg-scene-enter grid min-h-[calc(100vh-7rem)] place-items-center">
@@ -58,19 +61,34 @@ export function TitleScreen() {
                                         Begin Investigation
                                     </Link>
 
-                                    <Button
-                                        disabled
-                                        size="lg"
-                                        title="Continue will be enabled after local save progress is implemented."
-                                        variant="secondary"
-                                    >
-                                        Continue Case
-                                    </Button>
+                                    {continueCase.status === "ready" &&
+                                    continueCase.destination ? (
+                                        <Link
+                                            className={buttonClassName({
+                                                variant: "secondary",
+                                                size: "lg",
+                                            })}
+                                            to={continueCase.destination}
+                                            viewTransition
+                                        >
+                                            Continue Case
+                                        </Link>
+                                    ) : (
+                                        <Button
+                                            disabled
+                                            size="lg"
+                                            title={continueCase.message}
+                                            variant="secondary"
+                                        >
+                                            {continueCase.status === "checking"
+                                                ? "Checking Case"
+                                                : "Continue Case"}
+                                        </Button>
+                                    )}
                                 </div>
 
                                 <p className="rg-technical-label mt-4 max-w-xl text-rg-faint">
-                                    Continue locked until local save progress is
-                                    implemented.
+                                    {continueCase.message}
                                 </p>
                             </section>
                         </div>

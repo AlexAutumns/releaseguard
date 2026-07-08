@@ -5,6 +5,8 @@ import type {
     ReleaseTicketDefinition,
     ShiftDefinition,
 } from "../../features/content/content-types";
+import { resolveLocalProgress } from "../../features/gameplay/progress/local-progress-rules";
+import type { LocalShiftProgressStatus } from "../../features/gameplay/progress/local-progress-types";
 import {
     createShiftRun,
     getNextShiftRunTicketId,
@@ -28,10 +30,7 @@ export interface DeskShiftCard {
  */
 export type DeskShiftStatus =
     | "checking"
-    | "locked"
-    | "available"
-    | "in-progress"
-    | "completed"
+    | LocalShiftProgressStatus
     | "unavailable";
 
 /**
@@ -45,8 +44,9 @@ export interface ResolvedDeskShiftCard extends DeskShiftCard {
  * Resolves Case Desk shift state and owns start/resume/completed navigation.
  *
  * Browser progression is loaded after mount because the app is server-rendered.
- * The controller keeps localStorage access and sequencing decisions outside the
- * physical Desk screen while leaving authored content in the content repository.
+ * The controller delegates progression interpretation to the shared local
+ * progress resolver so the Desk and Continue Case do not maintain separate
+ * definitions of active, completed, unlocked, or latest historical runs.
  */
 export function useDeskController(shiftCards: DeskShiftCard[]) {
     const navigate = useNavigate();
@@ -69,12 +69,19 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
         setStorageStatus("ready");
     }, []);
 
-    const resolvedShiftCards = useMemo<ResolvedDeskShiftCard[]>(() => {
-        const shiftRunByShiftId = new Map(
-            shiftRuns.map((shiftRun) => [shiftRun.shiftId, shiftRun]),
-        );
+    const progressResult = useMemo(() => {
+        if (storageStatus !== "ready") {
+            return null;
+        }
 
-        return shiftCards.map((shiftCard, index) => {
+        return resolveLocalProgress({
+            shifts: shiftCards.map((shiftCard) => shiftCard.shift),
+            shiftRuns,
+        });
+    }, [shiftCards, shiftRuns, storageStatus]);
+
+    const resolvedShiftCards = useMemo<ResolvedDeskShiftCard[]>(() => {
+        return shiftCards.map((shiftCard) => {
             if (shiftCard.tickets.length === 0) {
                 return {
                     ...shiftCard,
@@ -89,44 +96,27 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
                 };
             }
 
-            if (storageStatus === "error") {
+            if (
+                storageStatus === "error" ||
+                !progressResult ||
+                !progressResult.ok
+            ) {
                 return {
                     ...shiftCard,
                     status: "unavailable",
                 };
             }
 
-            const previousShift = shiftCards[index - 1]?.shift;
-            const previousShiftRun = previousShift
-                ? shiftRunByShiftId.get(previousShift.id)
-                : undefined;
-            const isUnlocked =
-                shiftCard.shift.isUnlockedByDefault ||
-                Boolean(previousShiftRun?.completedAt);
-
-            if (!isUnlocked) {
-                return {
-                    ...shiftCard,
-                    status: "locked",
-                };
-            }
-
-            const shiftRun = shiftRunByShiftId.get(shiftCard.shift.id);
-
-            if (!shiftRun) {
-                return {
-                    ...shiftCard,
-                    status: "available",
-                };
-            }
+            const shiftProgress = progressResult.value.shifts.find(
+                (item) => item.shiftId === shiftCard.shift.id,
+            );
 
             return {
                 ...shiftCard,
-                status:
-                    shiftRun.completedAt === null ? "in-progress" : "completed",
+                status: shiftProgress?.status ?? "unavailable",
             };
         });
-    }, [shiftCards, shiftRuns, storageStatus]);
+    }, [progressResult, shiftCards, storageStatus]);
 
     const activeShift =
         resolvedShiftCards.find(
@@ -134,6 +124,11 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
         )?.shift ??
         resolvedShiftCards.find((shiftCard) => shiftCard.status === "available")
             ?.shift;
+    const resolvedErrorMessage =
+        errorMessage ??
+        (progressResult && !progressResult.ok
+            ? progressResult.issue.message
+            : null);
 
     /**
      * Opens the correct destination for one authored shift lifecycle state.
@@ -150,11 +145,22 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
             return;
         }
 
+        if (!progressResult || !progressResult.ok) {
+            setErrorMessage(
+                progressResult?.issue.message ??
+                    "Shift progression could not be resolved.",
+            );
+            return;
+        }
+
         const resolvedShift = resolvedShiftCards.find(
             (shiftCard) => shiftCard.shift.id === shiftId,
         );
+        const shiftProgress = progressResult.value.shifts.find(
+            (item) => item.shiftId === shiftId,
+        );
 
-        if (!resolvedShift) {
+        if (!resolvedShift || !shiftProgress) {
             setErrorMessage(`Shift "${shiftId}" could not be resolved.`);
             return;
         }
@@ -167,30 +173,38 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
             return;
         }
 
-        const existingShiftRun = shiftRuns.find(
-            (shiftRun) => shiftRun.shiftId === shiftId,
-        );
-
-        if (resolvedShift.status === "completed") {
-            if (!existingShiftRun) {
+        if (shiftProgress.status === "completed") {
+            if (!shiftProgress.latestCompletedShiftRun) {
                 setErrorMessage(
-                    `Completed shift "${shiftId}" is missing its Shift Run record.`,
+                    `Completed shift "${shiftId}" is missing its latest completed Shift Run record.`,
                 );
                 return;
             }
 
-            navigate(`/results/shift/${existingShiftRun.shiftRunId}`, {
-                viewTransition: true,
-            });
+            navigate(
+                `/results/shift/${shiftProgress.latestCompletedShiftRun.shiftRunId}`,
+                {
+                    viewTransition: true,
+                },
+            );
             return;
         }
 
-        if (existingShiftRun) {
-            const nextTicketId = getNextShiftRunTicketId(existingShiftRun);
+        if (shiftProgress.status === "in-progress") {
+            if (!shiftProgress.activeShiftRun) {
+                setErrorMessage(
+                    `In-progress shift "${shiftId}" is missing its active Shift Run record.`,
+                );
+                return;
+            }
+
+            const nextTicketId = getNextShiftRunTicketId(
+                shiftProgress.activeShiftRun,
+            );
 
             if (!nextTicketId) {
                 setErrorMessage(
-                    `Shift Run "${existingShiftRun.shiftRunId}" has no next ticket and is not marked complete.`,
+                    `Shift Run "${shiftProgress.activeShiftRun.shiftRunId}" has no next ticket and is not marked complete.`,
                 );
                 return;
             }
@@ -228,7 +242,7 @@ export function useDeskController(shiftCards: DeskShiftCard[]) {
 
     return {
         activeShift,
-        errorMessage,
+        errorMessage: resolvedErrorMessage,
         openShift,
         resolvedShiftCards,
     };

@@ -34,7 +34,7 @@ import { saveTicketScoreResult } from "../../features/gameplay/results/ticket-re
 import { scoreTicketAttempt } from "../../features/gameplay/scoring/scoring-engine";
 import { completeShiftRunTicket } from "../../features/gameplay/shift-run/shift-run-rules";
 import {
-    loadShiftRunByShiftId,
+    loadIncompleteShiftRunByShiftId,
     saveShiftRun,
 } from "../../features/gameplay/shift-run/shift-run-storage";
 
@@ -817,7 +817,7 @@ export function useInvestigationController({
             return null;
         }
 
-        const shiftRunLoadResult = loadShiftRunByShiftId(shift.id);
+        const shiftRunLoadResult = loadIncompleteShiftRunByShiftId(shift.id);
 
         if (!shiftRunLoadResult.ok) {
             pushNotification({
