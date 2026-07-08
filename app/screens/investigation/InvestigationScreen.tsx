@@ -561,11 +561,11 @@ interface InvestigationBoardPanelProps {
 }
 
 /**
- * Main Board viewport and larger logical cork-board world.
+ * Main cork-board viewport for pinned evidence and Evidence Threads.
  *
- * The visible viewport accepts the height provided by the Investigation
- * workspace. The logical Board remains larger than that viewport and Pan
- * controls which part of the world is currently visible.
+ * The frame and cork are physical presentation only. Board coordinates, Pan,
+ * Arrange, thread geometry, and attempt state remain owned by the existing
+ * gameplay/controller layers.
  */
 function InvestigationBoardPanel({
     boardViewportRef,
@@ -758,7 +758,7 @@ function InvestigationBoardPanel({
         <Panel
             className="rg-investigation-major-object h-full min-h-0"
             padding="sm"
-            tone="cork"
+            tone="wood"
         >
             <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
@@ -802,15 +802,11 @@ function InvestigationBoardPanel({
                     </div>
                 </div>
 
-                <div className="rg-investigation-board-frame relative min-h-0 flex-1 overflow-hidden border border-rg-paper-strong/28 bg-rg-cork-dark/20">
-                    <div className="absolute inset-0 opacity-70">
-                        <div className="rg-cork-grain h-full w-full" />
-                    </div>
-
+                <div className="rg-board-frame rg-investigation-board-frame relative min-h-0 flex-1 overflow-hidden">
                     <div className="relative z-10 h-full min-h-0 p-2">
                         <div
                             className={cn(
-                                "rg-investigation-board-viewport relative h-full touch-none overflow-hidden border border-dashed border-rg-paper-strong/20 bg-rg-cork-dark/20",
+                                "rg-board-cork-surface rg-investigation-board-viewport relative h-full touch-none overflow-hidden",
                                 activeTool === "pan"
                                     ? "cursor-grab active:cursor-grabbing"
                                     : "",
@@ -825,19 +821,33 @@ function InvestigationBoardPanel({
                             ref={boardViewportRef}
                         >
                             {controller.pinnedBoardItems.length === 0 && (
-                                <div className="relative z-10 grid h-full place-items-center">
-                                    <div className="max-w-sm rounded-2xl border border-rg-paper-strong/25 bg-rg-cork-dark/50 p-4 text-center shadow-xl shadow-black/25">
-                                        <p className="text-base font-black text-rg-paper-strong">
-                                            Board is clear
+                                <div className="pointer-events-none relative z-10 grid h-full place-items-center p-4">
+                                    <section
+                                        aria-label="Board start instructions"
+                                        className="rg-board-start-slip"
+                                    >
+                                        <p className="rg-board-start-slip__kicker">
+                                            Board Start
                                         </p>
 
-                                        <p className="mt-2 text-xs leading-5 text-rg-paper-strong/75">
-                                            Inspect evidence from the file
-                                            drawer, then pin useful clues here.
-                                            Open Casework when you are ready to
-                                            file a supported finding.
-                                        </p>
-                                    </div>
+                                        <ol className="rg-board-start-slip__steps">
+                                            <li>
+                                                <span>01</span>
+                                                Inspect a file from the drawer.
+                                            </li>
+
+                                            <li>
+                                                <span>02</span>
+                                                Pin useful release evidence.
+                                            </li>
+
+                                            <li>
+                                                <span>03</span>
+                                                File a supported finding in
+                                                Casework.
+                                            </li>
+                                        </ol>
+                                    </section>
                                 </div>
                             )}
 
