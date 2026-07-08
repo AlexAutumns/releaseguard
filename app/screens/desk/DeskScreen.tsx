@@ -3,6 +3,9 @@ import { Link } from "react-router";
 import { buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { ScreenShell } from "../../components/ui/ScreenShell";
+
+import { DeskFileControls } from "./DeskFileControls";
+
 import type {
     ReleaseTicketDefinition,
     ShiftDefinition,
@@ -60,7 +63,11 @@ export function DeskScreen({ shiftCards }: DeskScreenProps) {
             title="Open Case Files"
         >
             <div className="rg-scene-enter grid gap-5 xl:grid-cols-[minmax(280px,0.68fr)_minmax(0,1.32fr)]">
-                <DeskLedger activeShift={activeShift} />
+                <div className="grid content-start gap-5">
+                    <DeskLedger activeShift={activeShift} />
+
+                    <DeskFileControls />
+                </div>
 
                 <section className="rounded-xl border border-rg-border bg-rg-surface/92 p-5 shadow-2xl shadow-black/40">
                     <div className="mb-5 flex flex-col gap-3 border-b border-rg-border/70 pb-4 sm:flex-row sm:items-end sm:justify-between">
