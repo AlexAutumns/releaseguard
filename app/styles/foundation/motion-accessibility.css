@@ -90,6 +90,15 @@ html[data-rg-motion="reduced"] .rg-investigation-rail {
     transform: none !important;
 }
 
+/**
+ * Severity selection keeps the same radio state in reduced motion while the
+ * investigator oval appears complete immediately.
+ */
+html[data-rg-motion="reduced"] .rg-casework-severity-oval__path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+}
+
 html[data-rg-motion="reduced"]::view-transition-old(root),
 html[data-rg-motion="reduced"]::view-transition-new(root) {
     animation: rg-reduced-fade 160ms ease-out both !important;

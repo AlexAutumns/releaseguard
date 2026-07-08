@@ -231,9 +231,9 @@
     color: currentColor;
 
     font-family: var(--font-case);
-    font-size: 0.68rem;
+    font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     line-height: 1;
     text-transform: uppercase;
     writing-mode: vertical-rl;

@@ -38,7 +38,7 @@ export function InvestigationRail({
             onClick={onOpen}
             title={
                 disabled
-                    ? "Finish turning the Notebook page first."
+                    ? "Finish turning the Notepad page first."
                     : `Open ${label}`
             }
             type="button"
@@ -49,7 +49,7 @@ export function InvestigationRail({
 
             <Icon
                 aria-hidden="true"
-                className="rg-investigation-rail__icon"
+                className="rg-investigation-rail__icon h-4 w-4"
                 strokeWidth={2}
             />
 

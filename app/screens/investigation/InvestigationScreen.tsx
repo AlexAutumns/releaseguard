@@ -14,7 +14,7 @@ import { Button, buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Panel } from "../../components/ui/Panel";
 
-import { Archive, NotebookTabs } from "lucide-react";
+import { Archive, ChevronLeft, ChevronRight, NotepadText } from "lucide-react";
 
 import type {
     FamilyReferenceDefinition,
@@ -318,7 +318,7 @@ function InvestigationWorkspace({
                         />
                     ) : (
                         <InvestigationRail
-                            icon={NotebookTabs}
+                            icon={NotepadText}
                             label="Casework"
                             meta={
                                 <Badge tone="warning">
@@ -444,13 +444,17 @@ function EvidenceCabinetPanel({
 
                     <Button
                         aria-label="Collapse evidence cabinet"
-                        className="h-8 w-8 shrink-0 px-0"
+                        className="h-8 w-8 shrink-0 px-0 text-rg-amber"
                         onClick={onCollapse}
                         size="sm"
                         title="Collapse evidence cabinet"
                         variant="secondary"
                     >
-                        ←
+                        <ChevronLeft
+                            aria-hidden="true"
+                            className="h-4 w-4 shrink-0"
+                            strokeWidth={2.3}
+                        />
                     </Button>
                 </div>
 
@@ -553,7 +557,6 @@ function EvidenceCabinetPanel({
         </Panel>
     );
 }
-
 interface InvestigationBoardPanelProps {
     boardViewportRef: RefObject<HTMLDivElement | null>;
     boardWorldRef: RefObject<HTMLDivElement | null>;
@@ -988,9 +991,9 @@ interface CaseworkPanelProps {
 }
 
 /**
- * Interactive Casework Notebook backed by the shared paged-document lifecycle.
+ * Interactive Casework Notepad backed by the shared paged-document lifecycle.
  *
- * All three Notebook pages remain mounted while this panel exists. Casework
+ * All three Notepad pages remain mounted while this panel exists. Casework
  * owns residency, scroll, interaction locking, and physical page motion; the
  * shared pager owns only the logical page-change lifecycle.
  */
@@ -1001,7 +1004,7 @@ function CaseworkPanel({
     onSubmitReport,
 }: CaseworkPanelProps) {
     /**
-     * Advances the logical page lifecycle at Notebook-owned animation
+     * Advances the logical page lifecycle at Notepad-owned animation
      * boundaries. Child animations are ignored because only the physical page
      * stage is allowed to commit or finish a page turn.
      */
@@ -1023,11 +1026,7 @@ function CaseworkPanel({
     };
 
     return (
-        <Panel
-            className="rg-investigation-major-object h-full min-h-0"
-            padding="sm"
-            tone="notepad"
-        >
+        <section className="rg-casework-notepad-shell rg-investigation-major-object h-full min-h-0 p-3">
             <div className="flex h-full min-h-0 flex-col">
                 <div className="mb-2 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
                     <div className="min-w-0">
@@ -1037,7 +1036,7 @@ function CaseworkPanel({
 
                         <div className="flex items-center gap-2">
                             <h2 className="truncate text-lg font-black tracking-[-0.04em] text-rg-text">
-                                Notebook
+                                Notepad
                             </h2>
 
                             <Badge tone="neutral">
@@ -1052,24 +1051,28 @@ function CaseworkPanel({
 
                     <Button
                         aria-label="Collapse casework drawer"
-                        className="h-8 w-8 shrink-0 px-0"
+                        className="h-8 w-8 shrink-0 px-0 text-rg-amber"
                         disabled={document.isChangingPage}
                         onClick={onCollapse}
                         size="sm"
                         title={
                             document.isChangingPage
-                                ? "Finish turning the Notebook page first."
+                                ? "Finish turning the Notepad page first."
                                 : "Collapse casework drawer"
                         }
                         variant="secondary"
                     >
-                        →
+                        <ChevronRight
+                            aria-hidden="true"
+                            className="h-4 w-4 shrink-0"
+                            strokeWidth={2.3}
+                        />
                     </Button>
                 </div>
 
                 <nav
-                    aria-label="Casework notebook pages"
-                    className="rg-casework-bookmarks mb-3 shrink-0"
+                    aria-label="Casework notepad sections"
+                    className="rg-casework-bookmarks relative z-20 -mb-px shrink-0 pl-3"
                 >
                     {caseworkPages.map((page) => {
                         const isCurrentPage =
@@ -1098,7 +1101,7 @@ function CaseworkPanel({
 
                 <div
                     aria-busy={document.isChangingPage}
-                    className="rg-casework-page-stage rg-notepad-texture min-h-0 flex-1"
+                    className="rg-casework-page-stage min-h-0 flex-1"
                     data-page-direction={document.direction ?? undefined}
                     data-page-phase={document.phase}
                     onAnimationEnd={handlePageAnimationEnd}
@@ -1161,10 +1164,9 @@ function CaseworkPanel({
                     </CaseworkPageSection>
                 </div>
             </div>
-        </Panel>
+        </section>
     );
 }
-
 interface CaseworkBookmarkButtonProps {
     isCurrentPage: boolean;
     isPageChanging: boolean;
@@ -1175,11 +1177,11 @@ interface CaseworkBookmarkButtonProps {
 }
 
 /**
- * Physical Notebook bookmark used for named direct page navigation.
+ * Physical Notepad index tab used for named section navigation.
  *
- * The button stays focusable while a turn is active so the selected bookmark
- * can retain focus. `aria-disabled` communicates the temporary interaction
- * lock, while usePagedDocument remains the final guard against repeated input.
+ * The button stays focusable while a turn is active so the selected tab can
+ * retain focus. `aria-disabled` communicates the temporary interaction lock,
+ * while usePagedDocument remains the final guard against repeated input.
  */
 function CaseworkBookmarkButton({
     isCurrentPage,
@@ -1212,7 +1214,7 @@ interface CaseworkPageSectionProps {
 }
 
 /**
- * One resident Casework Notebook page with its own scroll region.
+ * One resident Casework Notepad page with its own scroll region.
  *
  * Inactive pages stay mounted so browser-maintained page state, such as scroll
  * position, can survive page visits without moving presentation state into the
@@ -1231,13 +1233,15 @@ function CaseworkPageSection({
         <section
             aria-hidden={!isInteractive}
             aria-labelledby={getCaseworkBookmarkId(pageId)}
-            className="rg-casework-page rg-scrollbar-thin h-full min-h-0 overflow-y-auto overscroll-contain pr-1"
+            className="rg-casework-page rg-scrollbar-thin h-full min-h-0 overflow-y-auto overscroll-contain"
             data-casework-page-id={pageId}
             hidden={!isCurrentPage}
             inert={!isInteractive}
             role="region"
         >
-            {children}
+            <div className="rg-casework-sheet rg-notepad-texture min-h-full px-2 pb-3 pr-2 pt-2">
+                {children}
+            </div>
         </section>
     );
 }

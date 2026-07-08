@@ -1,4 +1,3 @@
-import { Badge } from "../../components/ui/Badge";
 import type { LinkableEvidenceItem } from "./useInvestigationController";
 
 export interface LinkedEvidencePickerProps {
@@ -7,10 +6,11 @@ export interface LinkedEvidencePickerProps {
 }
 
 /**
- * Evidence support selector used by the New Finding casework tab.
+ * Direct-evidence filing checklist used by the New Finding case form.
  *
- * Build 001F-A supports individual evidence selection. Build 001F-B will add
- * Evidence Threads above these individual evidence choices.
+ * Selection remains controlled by the existing draft finding state. Native
+ * checkboxes expose the filing action semantically while the Notepad material
+ * supplies the physical check-mark presentation.
  */
 export function LinkedEvidencePicker({
     items,
@@ -23,21 +23,21 @@ export function LinkedEvidencePicker({
 
     if (items.length === 0) {
         return (
-            <div className="rounded-2xl border border-dashed border-rg-border-soft bg-rg-surface/65 p-4">
-                <p className="text-sm font-bold text-rg-text">
+            <div className="rg-casework-inline-note px-2 py-2.5">
+                <p className="font-case text-sm font-bold text-rg-paper-ink">
                     No reviewed evidence yet.
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-rg-muted">
-                    Inspect evidence from the file drawer first. Reviewed and
-                    pinned evidence will appear here as possible support.
+                <p className="mt-1 font-case text-xs font-bold leading-5 text-rg-paper-ink/75">
+                    Inspect a file from the drawer first. Reviewed and pinned
+                    evidence will appear here as possible support.
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="grid gap-3">
+        <div className="grid gap-4">
             <EvidenceSupportGroup
                 emptyMessage="Pinned evidence will appear here."
                 items={pinnedItems}
@@ -63,7 +63,7 @@ interface EvidenceSupportGroupProps {
 }
 
 /**
- * One evidence support section.
+ * One direct-evidence register inside the filing checklist.
  */
 function EvidenceSupportGroup({
     emptyMessage,
@@ -72,52 +72,55 @@ function EvidenceSupportGroup({
     onToggleEvidence,
 }: EvidenceSupportGroupProps) {
     return (
-        <section className="rounded-2xl border border-rg-border-soft bg-rg-surface/55 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-rg-muted">
+        <section className="border-t-2 border-rg-folder-dark/35 pt-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="font-case text-[0.68rem] font-bold uppercase tracking-[0.08em] text-rg-paper-ink/85">
                     {label}
                 </p>
 
-                <Badge tone="neutral">{items.length}</Badge>
+                <span className="font-mono text-[0.56rem] font-extrabold uppercase tracking-[0.08em] text-rg-paper-ink/70">
+                    {items.length} file{items.length === 1 ? "" : "s"}
+                </span>
             </div>
 
             {items.length > 0 ? (
-                <div className="grid gap-2">
+                <div className="grid gap-1.5">
                     {items.map((item) => (
-                        <button
-                            className="rounded-xl border border-rg-border-soft bg-rg-surface-raised p-3 text-left transition hover:border-rg-amber/70 hover:bg-rg-surface-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber"
-                            key={item.evidenceCard.id}
-                            onClick={() =>
-                                onToggleEvidence(item.evidenceCard.id)
+                        <label
+                            className="rg-casework-check-row relative grid cursor-pointer grid-cols-[1.4rem_minmax(0,1fr)] items-start gap-3 py-2.5 pl-1 pr-2"
+                            data-checked={
+                                item.isLinkedToDraft ? "true" : "false"
                             }
-                            type="button"
+                            key={item.evidenceCard.id}
                         >
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="line-clamp-2 text-sm font-bold leading-5 text-rg-text">
-                                        {item.evidenceCard.title}
-                                    </p>
+                            <input
+                                checked={item.isLinkedToDraft}
+                                className="rg-casework-check-input sr-only"
+                                onChange={() =>
+                                    onToggleEvidence(item.evidenceCard.id)
+                                }
+                                type="checkbox"
+                            />
 
-                                    <p className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-rg-muted">
-                                        {item.evidenceCard.source}
-                                    </p>
-                                </div>
+                            <span
+                                aria-hidden="true"
+                                className="rg-casework-check-mark mt-0.5"
+                            />
 
-                                <Badge
-                                    tone={
-                                        item.isLinkedToDraft
-                                            ? "success"
-                                            : "neutral"
-                                    }
-                                >
-                                    {item.isLinkedToDraft ? "Linked" : "Link"}
-                                </Badge>
-                            </div>
-                        </button>
+                            <span className="min-w-0">
+                                <span className="rg-casework-support-title line-clamp-2 block font-case text-sm font-bold leading-5 text-rg-paper-ink">
+                                    {item.evidenceCard.title}
+                                </span>
+
+                                <span className="mt-0.5 block truncate font-mono text-[0.62rem] font-bold uppercase tracking-[0.09em] text-rg-paper-ink/65">
+                                    {item.evidenceCard.source}
+                                </span>
+                            </span>
+                        </label>
                     ))}
                 </div>
             ) : (
-                <p className="rounded-xl border border-dashed border-rg-border-soft bg-rg-surface/45 p-3 text-xs leading-5 text-rg-muted">
+                <p className="rg-casework-inline-note px-2 py-2.5 font-case text-xs font-bold leading-5 text-rg-paper-ink/70">
                     {emptyMessage}
                 </p>
             )}
