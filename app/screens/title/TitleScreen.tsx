@@ -32,9 +32,18 @@ export function TitleScreen() {
                                     </span>
                                 </div>
 
-                                <p className="rg-display-title text-[clamp(2.8rem,3.8vw,4.8rem)] text-rg-amber">
-                                    ReleaseGuard
-                                </p>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                    <p className="rg-display-title text-[clamp(2.8rem,3.8vw,4.8rem)] text-rg-amber">
+                                        ReleaseGuard
+                                    </p>
+
+                                    <span
+                                        aria-label="Beta release"
+                                        className="-translate-y-0.5 rounded-[0.12rem] border border-rg-amber/55 bg-[linear-gradient(180deg,rgb(214_160_68_/_0.22)_0%,rgb(159_109_43_/_0.17)_52%,rgb(36_27_22_/_0.08)_100%)] px-2.5 py-[0.28rem] font-display text-[0.82rem] font-bold uppercase leading-none tracking-[0.08em] text-rg-amber shadow-[inset_0_1px_rgb(255_239_199_/_0.16),inset_0_-1px_rgb(71_42_18_/_0.42),0_0.18rem_0.38rem_rgb(0_0_0_/_0.24)]"
+                                    >
+                                        Beta
+                                    </span>
+                                </div>
 
                                 <h1 className="rg-display-title mt-5 max-w-4xl text-[clamp(3rem,4.5vw,5.1rem)] text-rg-text">
                                     Every release leaves a trail.
