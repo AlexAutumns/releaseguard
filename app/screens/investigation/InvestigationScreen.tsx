@@ -1247,7 +1247,7 @@ function CaseworkPageSection({
 }
 
 /**
- * Returns the DOM ID used to connect a Casework page to its physical bookmark.
+ * Returns the DOM ID used to connect a Casework page to its physical index tab.
  */
 function getCaseworkBookmarkId(pageId: CaseworkPageId): string {
     return `casework-bookmark-${pageId.replace("casework:", "")}`;
@@ -1257,36 +1257,60 @@ interface FiledCaseworkProps {
 }
 
 /**
- * Filed findings tab.
+ * Filed findings ledger for the current ticket attempt.
+ *
+ * Filed support remains immutable snapshot data from the controller. This page
+ * only resolves the saved finding records into a paper-ledger presentation.
  */
 function FiledCasework({ controller }: FiledCaseworkProps) {
-    if (controller.filedFindingItems.length === 0) {
-        return (
-            <EmptyState
-                description="File a supported finding from the New tab."
-                title="No filed findings"
-                tone="paper"
-            />
-        );
-    }
-
     return (
-        <div className="grid gap-2 pb-2">
-            {controller.filedFindingItems.map((item) => (
-                <FiledFindingCard
-                    filedFinding={item.filedFinding}
-                    findingType={item.findingType}
-                    key={item.filedFinding.filedFindingId}
-                    linkedEvidenceCards={item.linkedEvidenceCards}
-                    linkedThreadItems={item.linkedThreadItems}
-                    onRemove={() =>
-                        controller.removeFiledFinding(
-                            item.filedFinding.filedFindingId,
-                        )
-                    }
-                />
-            ))}
-        </div>
+        <section className="grid gap-5 pb-6 pt-4 text-rg-paper-ink">
+            <header className="border-b-[3px] border-rg-folder-dark/55 pb-4">
+                <p className="font-case text-[0.68rem] font-bold uppercase tracking-[0.12em] text-rg-paper-ink/80">
+                    Case Ledger / Filed Findings
+                </p>
+
+                <h3 className="mt-1 font-case text-lg font-bold leading-5 text-rg-paper-ink">
+                    Filed Case Records
+                </h3>
+
+                <p className="mt-3 font-case text-xs font-bold leading-5 text-rg-paper-ink/80">
+                    Filed findings preserve the evidence and Evidence Thread
+                    support recorded at filing time.
+                </p>
+            </header>
+
+            {controller.filedFindingItems.length === 0 ? (
+                <section className="rg-casework-filed-empty border-y-2 border-rg-folder-dark/35 py-6">
+                    <p className="font-case text-sm font-bold text-rg-paper-ink">
+                        No filed findings.
+                    </p>
+
+                    <p className="mt-1 font-case text-xs font-bold leading-5 text-rg-paper-ink/72">
+                        Complete a supported finding in the New section. Filed
+                        case records will be entered here.
+                    </p>
+                </section>
+            ) : (
+                <div className="rg-casework-filed-ledger grid">
+                    {controller.filedFindingItems.map((item, index) => (
+                        <FiledFindingCard
+                            filedFinding={item.filedFinding}
+                            findingType={item.findingType}
+                            key={item.filedFinding.filedFindingId}
+                            linkedEvidenceCards={item.linkedEvidenceCards}
+                            linkedThreadItems={item.linkedThreadItems}
+                            onRemove={() =>
+                                controller.removeFiledFinding(
+                                    item.filedFinding.filedFindingId,
+                                )
+                            }
+                            sequenceNumber={index + 1}
+                        />
+                    ))}
+                </div>
+            )}
+        </section>
     );
 }
 

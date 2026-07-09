@@ -2,7 +2,7 @@
  * ReleaseGuard investigator Notepad material.
  *
  * This file owns the physical Casework Notepad backing, ruled writing sheet,
- * page-turn presentation, bookmarks, and paper-native finding interactions.
+ * page-turn presentation, section index tabs, and paper-native finding interactions.
  * Official case documents remain in materials/paper.css.
  */
 
@@ -151,15 +151,17 @@
     background-color: var(--color-rg-notepad-strong);
     color: var(--color-rg-paper-ink);
 
-    box-shadow: 0 0.2rem 0.6rem rgb(19 10 6 / 11%);
+    box-shadow:
+        0 0.2rem 0.6rem rgb(19 10 6 / 11%),
+        inset 0 1px 0 rgb(255 248 218 / 18%);
 }
 
 /* -------------------------------------------------------------------------- */
-/* Casework Casework Notepad page movement                                            */
+/* Casework Notepad page movement                                            */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Overlapping index-tab rail for the three fixed Casework Notepad sections.
+ * Overlapping section-index rail for the three fixed Casework Notepad pages.
  *
  * The tabs use natural content widths, overlap like attached divider markers,
  * and meet the active paper sheet directly. The shared pager still owns page
@@ -220,10 +222,6 @@
         box-shadow var(--rg-motion-control) var(--rg-ease-out);
 }
 
-/**
- * Later tabs sit partially over the previous marker so the group reads as a
- * physical section index rather than three equally spaced application tabs.
- */
 .rg-casework-bookmark + .rg-casework-bookmark {
     margin-inline-start: -0.55rem;
 }
@@ -721,6 +719,477 @@
 }
 
 .rg-casework-filing-mark--complete {
+    border-color: rgb(111 35 29 / 78%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-1deg);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Filed case ledger                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Empty filed-ledger note printed directly on the sheet.
+ */
+.rg-casework-filed-empty {
+    padding-inline-start: 1rem;
+    border-inline-start: 3px solid rgb(111 35 29 / 38%);
+}
+
+/**
+ * Filed findings are margin-owned ledger records rather than cards.
+ *
+ * Each record reserves the same 3.25rem filing gutter used by the New Finding
+ * form. The content column therefore begins to the right of the physical margin
+ * line and keeps one writing grammar across all Notepad sections.
+ */
+.rg-casework-filed-ledger {
+    min-width: 0;
+}
+
+.rg-casework-filed-record {
+    position: relative;
+    min-width: 0;
+    isolation: isolate;
+}
+
+/**
+ * A strong double ledger rule marks a whole-record boundary. Internal record
+ * sections rely on spacing and typed labels so record and subsection rules do
+ * not compete with one another.
+ */
+.rg-casework-filed-record + .rg-casework-filed-record {
+    margin-top: 1.25rem;
+    border-top: 4px double rgb(86 58 33 / 58%);
+}
+
+.rg-casework-filed-gutter {
+    position: relative;
+    min-width: 0;
+    padding-top: 1.55rem;
+}
+
+.rg-casework-filed-gutter::after {
+    position: absolute;
+    top: 3.25rem;
+    right: 0;
+    bottom: 1.25rem;
+
+    width: 2px;
+
+    background: rgb(111 35 29 / 58%);
+
+    content: "";
+}
+
+.rg-casework-filed-gutter::before {
+    position: absolute;
+    right: -0.42rem;
+    bottom: 1.25rem;
+
+    width: 0.42rem;
+    height: 2px;
+
+    background: rgb(111 35 29 / 58%);
+
+    content: "";
+}
+
+.rg-casework-filed-number {
+    display: block;
+    padding-inline-start: 0.15rem;
+
+    color: rgb(111 35 29 / 82%);
+
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1;
+}
+
+.rg-casework-filed-body {
+    min-width: 0;
+}
+
+.rg-casework-filed-header {
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgb(93 67 38 / 34%);
+}
+
+.rg-casework-filed-section {
+    min-width: 0;
+}
+
+.rg-casework-filed-code,
+.rg-casework-filed-severity {
+    border: 1px solid rgb(91 50 32 / 54%);
+    border-radius: 0.08rem;
+    padding: 0.22rem 0.32rem 0.16rem;
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-filed-code {
+    color: rgb(73 43 28 / 88%);
+}
+
+.rg-casework-filed-severity {
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-filed-severity[data-severity="low"] {
+    opacity: 0.72;
+}
+
+.rg-casework-filed-severity[data-severity="medium"] {
+    border-style: double;
+}
+
+.rg-casework-filed-severity[data-severity="high"] {
+    border-width: 2px;
+    transform: rotate(-0.5deg);
+}
+
+.rg-casework-filed-severity[data-severity="critical"] {
+    border-width: 2px;
+    background: rgb(111 35 29 / 10%);
+    transform: rotate(-1deg);
+}
+
+.rg-casework-filed-thread-line {
+    padding: 0.2rem 0 0.3rem 0.85rem;
+    border-inline-start: 2px solid rgb(91 61 35 / 42%);
+}
+
+/**
+ * Right-header erase control for one filed record.
+ */
+.rg-casework-filed-remove {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+
+    border: 1px solid transparent;
+    border-radius: 0.14rem;
+
+    background: transparent;
+    color: rgb(111 35 29 / 72%);
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-filed-remove:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgb(111 35 29 / 52%);
+    background: rgb(111 35 29 / 8%);
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-filed-remove:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.rg-casework-filed-remove:focus-visible {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-filed-remove:disabled {
+    cursor: wait;
+}
+
+/**
+ * Presentation-only ink-lift erase pass.
+ *
+ * A paper-coloured wipe crosses from right to left while the filed ink fades and
+ * the visible record closes. The React component commits the existing remove
+ * handler after the same fixed 220ms duration; reduced motion bypasses this
+ * local presentation state and removes immediately.
+ */
+.rg-casework-filed-record[data-erasing="true"] {
+    overflow: hidden;
+    pointer-events: none;
+
+    animation: rg-casework-filed-record-close var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+.rg-casework-filed-record[data-erasing="true"] > * {
+    animation: rg-casework-filed-ink-lift var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+.rg-casework-filed-record::after {
+    position: absolute;
+    inset: -0.25rem auto -0.25rem 0;
+    z-index: 5;
+
+    width: 42%;
+
+    background:
+        radial-gradient(
+            circle at 18% 28%,
+            rgb(91 65 36 / 14%) 0 0.6px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            transparent,
+            rgb(225 200 143 / 72%) 18%,
+            rgb(229 207 154 / 96%) 50%,
+            rgb(225 200 143 / 72%) 82%,
+            transparent
+        );
+
+    background-size:
+        19px 23px,
+        100% 100%;
+
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(245%);
+}
+
+.rg-casework-filed-record[data-erasing="true"]::after {
+    animation: rg-casework-filed-erase-sweep var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+@keyframes rg-casework-filed-erase-sweep {
+    0% {
+        opacity: 0;
+        transform: translateX(245%);
+    }
+
+    12% {
+        opacity: 0.88;
+    }
+
+    78% {
+        opacity: 0.96;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-125%);
+    }
+}
+
+@keyframes rg-casework-filed-ink-lift {
+    0%,
+    28% {
+        opacity: 1;
+        filter: none;
+    }
+
+    72% {
+        opacity: 0.48;
+        filter: blur(0.3px);
+    }
+
+    100% {
+        opacity: 0;
+        filter: blur(0.8px);
+    }
+}
+
+@keyframes rg-casework-filed-record-close {
+    0%,
+    68% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        clip-path: inset(0 0 100% 0);
+        transform: translateY(-0.18rem);
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Verdict stamp and report filing                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Typed state marker for the current release-decision sheet.
+ */
+.rg-casework-verdict-state {
+    border: 1px solid rgb(81 53 31 / 58%);
+    border-radius: 0.08rem;
+    padding: 0.3rem 0.42rem 0.24rem;
+
+    color: rgb(67 43 26 / 78%);
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-verdict-state[data-stamped="true"] {
+    border-color: rgb(111 35 29 / 78%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-0.7deg);
+}
+
+/**
+ * Dry rubber verdict stamp face.
+ *
+ * Verdict identity uses fixed deterministic rotations. Selection strengthens the
+ * ink impression instead of converting the option into a filled UI card.
+ */
+.rg-casework-verdict-stamp {
+    --rg-verdict-rotation: -0.6deg;
+
+    position: relative;
+    min-height: 7.25rem;
+    padding: 1rem 0.9rem 0.8rem;
+
+    border: 1px solid rgb(93 67 38 / 30%);
+    border-radius: 0.16rem;
+
+    background: rgb(245 226 179 / 6%);
+    color: var(--color-rg-paper-ink);
+
+    text-align: center;
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-verdict-stamp[data-verdict="watch"] {
+    --rg-verdict-rotation: 0.7deg;
+}
+
+.rg-casework-verdict-stamp[data-verdict="hold"] {
+    --rg-verdict-rotation: 0.35deg;
+}
+
+.rg-casework-verdict-stamp[data-verdict="block"] {
+    --rg-verdict-rotation: -0.9deg;
+}
+
+.rg-casework-verdict-stamp:hover {
+    border-color: rgb(111 35 29 / 48%);
+    background: rgb(111 35 29 / 5%);
+}
+
+.rg-casework-verdict-stamp:active {
+    transform: translateY(2px);
+}
+
+.rg-casework-verdict-stamp:focus-visible {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-verdict-stamp__impression {
+    display: block;
+
+    color: rgb(111 35 29 / 38%);
+
+    font-family: var(--font-display);
+    font-size: clamp(1.35rem, 1.2rem + 0.35vw, 1.65rem);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+
+    text-shadow:
+        1px 0 rgb(111 35 29 / 7%),
+        -1px 1px rgb(111 35 29 / 5%);
+
+    transform: rotate(var(--rg-verdict-rotation));
+
+    transition:
+        color var(--rg-motion-control) var(--rg-ease-out),
+        opacity var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-verdict-stamp__description {
+    display: block;
+    margin-top: 0.85rem;
+
+    color: rgb(56 39 26 / 66%);
+
+    font-family: var(--font-case);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.rg-casework-verdict-stamp__state {
+    display: block;
+    margin-top: 0.75rem;
+
+    color: rgb(73 43 28 / 58%);
+
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-verdict-stamp[data-selected="true"] {
+    border-color: rgb(111 35 29 / 58%);
+    background: rgb(111 35 29 / 7%);
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__impression {
+    color: rgb(111 35 29 / 92%);
+
+    animation: rg-casework-verdict-stamp-press 180ms var(--rg-ease-out) both;
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__description {
+    color: rgb(56 39 26 / 82%);
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__state {
+    color: var(--color-rg-stamp-dark);
+}
+
+@keyframes rg-casework-verdict-stamp-press {
+    from {
+        opacity: 0.5;
+        transform: translateY(-0.18rem) scale(1.08)
+            rotate(var(--rg-verdict-rotation));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(var(--rg-verdict-rotation));
+    }
+}
+
+/**
+ * Verdict-page readiness marker reuses the New Finding filing language while
+ * allowing the Verdict page to expose its own ready/incomplete state.
+ */
+.rg-casework-filing-mark[data-ready="true"] {
     border-color: rgb(111 35 29 / 78%);
     color: var(--color-rg-stamp-dark);
     transform: rotate(-1deg);

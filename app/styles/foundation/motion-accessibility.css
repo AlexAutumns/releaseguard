@@ -99,6 +99,16 @@ html[data-rg-motion="reduced"] .rg-casework-severity-oval__path {
     stroke-dashoffset: 0 !important;
 }
 
+/**
+ * Verdict selection keeps the same chosen verdict in reduced motion while the
+ * ink impression appears complete immediately.
+ */
+html[data-rg-motion="reduced"]
+    .rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__impression {
+    animation: none !important;
+}
+
 html[data-rg-motion="reduced"]::view-transition-old(root),
 html[data-rg-motion="reduced"]::view-transition-new(root) {
     animation: rg-reduced-fade 160ms ease-out both !important;

@@ -1,7 +1,5 @@
-import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import type { ReleaseVerdict } from "../../features/content/content-types";
-import { cn } from "../../lib/cn";
 
 const verdictOptions: {
     id: ReleaseVerdict;
@@ -39,10 +37,11 @@ export interface VerdictDrawerProps {
 }
 
 /**
- * Verdict selection and ticket report submission panel.
+ * Physical verdict-stamp and report-filing page for the Casework Notepad.
  *
- * This component only renders readiness and calls submit handlers. Scoring,
- * storage, and navigation stay outside this drawer.
+ * This component only presents verdict selection and the existing readiness
+ * contract. Scoring, immutable report snapshots, persistence, and navigation
+ * remain owned by the Investigation controller and domain layers.
  */
 export function VerdictDrawer({
     canSubmitReport,
@@ -52,87 +51,110 @@ export function VerdictDrawer({
     selectedVerdict,
 }: VerdictDrawerProps) {
     const hasFiledFindings = filedFindingCount > 0;
-    const isReadyForReport = hasFiledFindings && selectedVerdict !== null;
+    const selectedVerdictOption = verdictOptions.find(
+        (verdict) => verdict.id === selectedVerdict,
+    );
 
     return (
-        <section className="grid gap-4 pb-2">
-            <div className="rounded-2xl border border-rg-border-soft bg-rg-surface/65 p-4">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-rg-amber">
-                            Verdict
+        <section className="grid gap-6 pb-6 pt-4 text-rg-paper-ink">
+            <header className="border-b-[3px] border-rg-folder-dark/55 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <p className="font-case text-[0.68rem] font-bold uppercase tracking-[0.12em] text-rg-paper-ink/80">
+                            Release Decision / Final Filing
                         </p>
 
-                        <h3 className="mt-1 text-lg font-black tracking-[-0.04em] text-rg-text">
-                            Stamp release decision
+                        <h3 className="mt-1 font-case text-lg font-bold leading-5 text-rg-paper-ink">
+                            Stamp Release Decision
                         </h3>
                     </div>
 
-                    <Badge tone={selectedVerdict ? "warning" : "danger"}>
-                        {selectedVerdict ?? "Unstamped"}
-                    </Badge>
+                    <span
+                        className="rg-casework-verdict-state shrink-0"
+                        data-stamped={selectedVerdict ? "true" : "false"}
+                    >
+                        {selectedVerdictOption
+                            ? `${selectedVerdictOption.label} Stamped`
+                            : "Awaiting Stamp"}
+                    </span>
                 </div>
 
-                <p className="mt-2 text-xs leading-5 text-rg-muted">
-                    The verdict should match the evidence and filed findings.
-                    Submitting will score the filed casework and save a ticket
+                <p className="mt-3 font-case text-xs font-bold leading-5 text-rg-paper-ink/80">
+                    Apply one official verdict that matches the evidence and
+                    filed case records. Submission scores and saves the ticket
                     report locally.
                 </p>
-            </div>
+            </header>
 
-            <div className="grid grid-cols-2 gap-2">
-                {verdictOptions.map((verdict) => {
-                    const isSelected = selectedVerdict === verdict.id;
+            <fieldset>
+                <legend className="font-case text-[0.68rem] font-bold uppercase tracking-[0.1em] text-rg-paper-ink/85">
+                    Official Verdict Stamp
+                </legend>
 
-                    return (
-                        <button
-                            className={cn(
-                                "rounded-2xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber",
-                                isSelected
-                                    ? "border-rg-amber bg-rg-amber text-rg-night"
-                                    : "border-rg-border-soft bg-rg-surface-raised text-rg-text hover:border-rg-amber/70 hover:bg-rg-surface-soft",
-                            )}
-                            key={verdict.id}
-                            onClick={() => onSelectVerdict(verdict.id)}
-                            type="button"
-                        >
-                            <span className="block text-sm font-black">
-                                {verdict.label}
-                            </span>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                    {verdictOptions.map((verdict) => {
+                        const isSelected = selectedVerdict === verdict.id;
 
-                            <span
-                                className={cn(
-                                    "mt-1 block text-xs leading-5",
-                                    isSelected
-                                        ? "text-rg-night/75"
-                                        : "text-rg-muted",
-                                )}
+                        return (
+                            <button
+                                aria-pressed={isSelected}
+                                className="rg-casework-verdict-stamp"
+                                data-selected={isSelected ? "true" : "false"}
+                                data-verdict={verdict.id}
+                                key={verdict.id}
+                                onClick={() => onSelectVerdict(verdict.id)}
+                                type="button"
                             >
-                                {verdict.description}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+                                <span className="rg-casework-verdict-stamp__impression">
+                                    {verdict.label}
+                                </span>
 
-            <div className="rounded-2xl border border-rg-border-soft bg-rg-surface/65 p-3">
-                <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-rg-muted">
-                    Report Readiness
-                </p>
+                                <span className="rg-casework-verdict-stamp__description">
+                                    {verdict.description}
+                                </span>
 
-                <ul className="mt-2 grid gap-1 text-xs leading-5 text-rg-muted">
-                    <ReadinessItem
-                        isComplete={hasFiledFindings}
-                        label="At least one finding filed"
-                    />
-                    <ReadinessItem
-                        isComplete={selectedVerdict !== null}
-                        label="Verdict selected"
-                    />
-                </ul>
+                                <span
+                                    aria-hidden="true"
+                                    className="rg-casework-verdict-stamp__state"
+                                >
+                                    {isSelected ? "Applied" : "Dry Stamp"}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </fieldset>
+
+            <section className="border-y-2 border-rg-folder-dark/45 py-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="font-case text-[0.68rem] font-bold uppercase tracking-[0.12em] text-rg-paper-ink/80">
+                            Filing Check
+                        </p>
+
+                        <ul className="mt-2 grid gap-2 font-case text-xs font-bold leading-5 text-rg-paper-ink/75">
+                            <ReadinessItem
+                                isComplete={hasFiledFindings}
+                                label="At least one finding filed"
+                            />
+
+                            <ReadinessItem
+                                isComplete={selectedVerdict !== null}
+                                label="Official verdict stamped"
+                            />
+                        </ul>
+                    </div>
+
+                    <span
+                        className="rg-casework-filing-mark"
+                        data-ready={canSubmitReport ? "true" : "false"}
+                    >
+                        {canSubmitReport ? "Ready" : "Incomplete"}
+                    </span>
+                </div>
 
                 <Button
-                    className="mt-3 w-full"
+                    className="mt-4 min-h-11 w-full"
                     disabled={!canSubmitReport}
                     onClick={onSubmitReport}
                     size="sm"
@@ -141,11 +163,11 @@ export function VerdictDrawer({
                             ? "Submit and score this ticket report."
                             : "File at least one finding and select a verdict before submitting."
                     }
-                    variant={isReadyForReport ? "stamp" : "secondary"}
+                    variant={canSubmitReport ? "stamp" : "secondary"}
                 >
                     {canSubmitReport ? "Submit Report" : "Report Locked"}
                 </Button>
-            </div>
+            </section>
         </section>
     );
 }
@@ -156,13 +178,23 @@ interface ReadinessItemProps {
 }
 
 /**
- * One verdict readiness line.
+ * One paper-native report filing requirement.
+ *
+ * This display mirrors the existing submission readiness rule and does not own
+ * or replace any gameplay state.
  */
 function ReadinessItem({ isComplete, label }: ReadinessItemProps) {
     return (
-        <li className={isComplete ? "text-rg-text" : ""}>
-            <span className="mr-1 font-black">{isComplete ? "✓" : "•"}</span>
-            {label}
+        <li className="flex items-center gap-2.5">
+            <span
+                aria-hidden="true"
+                className="rg-casework-checklist-mark"
+                data-complete={isComplete ? "true" : "false"}
+            />
+
+            <span className={isComplete ? "text-rg-paper-ink" : ""}>
+                {label}
+            </span>
         </li>
     );
 }
