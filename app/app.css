@@ -20,6 +20,8 @@
 @import "./styles/component-styles/investigation.css";
 @import "./styles/component-styles/report.css";
 
+@import "./styles/component-styles/board-tool-rack.css";
+
 @import "./styles/foundation/motion-accessibility.css";
 
 /* -------------------------------------------------------------------------- */
