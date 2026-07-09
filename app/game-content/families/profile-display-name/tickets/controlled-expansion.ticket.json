@@ -1,0 +1,80 @@
+{
+    "schemaVersion": 1,
+    "contentType": "release-ticket",
+    "id": "ticket-profile-display-name-controlled-expansion",
+    "familyId": "family-profile-display-name",
+    "baselineReferenceId": "reference-profile-display-name-baseline",
+    "variantKind": "mixed-variant",
+    "title": "Profile Display Name Controlled Expansion",
+    "productArea": "Profile Settings",
+    "difficulty": 1,
+    "briefing": "The profile team wants to expand display names to 48 characters and support more common real-world name formats. The implementation is behind a feature flag and has completed its main release checks. Review the remaining evidence and decide whether the release needs to stop.",
+    "tags": ["account", "testing", "operations"],
+    "correctVerdict": "ship",
+    "introducedIssues": [
+        {
+            "id": "issue-limited-punctuation-exploration",
+            "referenceArtifactId": "ref-display-name-edge-case-validation",
+            "expectedFindingIds": ["finding-limited-punctuation-exploration"],
+            "category": "testing",
+            "severity": "low",
+            "summary": "Manual exploratory QA did not sample every less-common supported punctuation combination, although automated contract tests cover the release boundary and representative international-name cases."
+        }
+    ],
+    "evidenceCards": [
+        {
+            "id": "ev-profile-ship-qa",
+            "type": "qa-note",
+            "title": "QA Release Check",
+            "source": "QA Tester",
+            "body": "Profile updates passed on desktop and mobile layouts. QA checked the 48-character limit, common apostrophes and hyphens, accented names, and a representative non-Latin name. The exploratory session did not manually sample every less-common punctuation combination allowed by the shared validator; those combinations remain covered by the automated validation suite.",
+            "riskHints": ["testing"]
+        },
+        {
+            "id": "ev-profile-ship-dev",
+            "type": "pull-request-comment",
+            "title": "Shared Validation Review",
+            "source": "Pull Request Discussion",
+            "body": "The profile form and profile API now import the same display-name contract. Database storage already supports 120 characters, so this release does not require a schema migration. The change remains behind the existing profile-name-expansion feature flag.",
+            "riskHints": ["testing", "operations"],
+            "attachments": [
+                {
+                    "id": "attachment-profile-shared-validation-tests",
+                    "type": "code",
+                    "language": "ts",
+                    "title": "Shared display-name contract tests",
+                    "body": "export const DISPLAY_NAME_MAX_LENGTH = 48;\n\nexport function isValidDisplayName(value: string): boolean {\n  const normalized = value.trim();\n\n  return (\n    normalized.length >= 1 &&\n    normalized.length <= DISPLAY_NAME_MAX_LENGTH &&\n    /^[\\p{L}\\p{M} .'-]+$/u.test(normalized)\n  );\n}\n\ndescribe(\"display name contract\", () => {\n  it.each([\n    \"Ana-Maria O'Neill\",\n    \"Jos\\u00e9 Alvarez\",\n    \"\\u5c71\\u7530 \\u592a\\u90ce\"\n  ])(\"accepts supported names: %s\", (name) => {\n    expect(isValidDisplayName(name)).toBe(true);\n  });\n\n  it(\"accepts exactly 48 characters\", () => {\n    expect(isValidDisplayName(\"A\".repeat(48))).toBe(true);\n  });\n\n  it(\"rejects 49 characters\", () => {\n    expect(isValidDisplayName(\"A\".repeat(49))).toBe(false);\n  });\n});"
+                }
+            ]
+        },
+        {
+            "id": "ev-profile-ship-support",
+            "type": "support-ticket",
+            "title": "Display Name Complaint Summary",
+            "source": "Support Desk",
+            "body": "Recent profile-name complaints are mostly from users whose longer legal names were rejected by the old 32-character limit. Support found no related profile corruption, account-access issue, or failed-update spike in the current release candidate.",
+            "riskHints": ["quality", "privacy"]
+        },
+        {
+            "id": "ev-profile-ship-release",
+            "type": "release-note",
+            "title": "Controlled Rollout Note",
+            "source": "Release Manager",
+            "body": "Expands profile display names to 48 characters using the shared validation contract. The existing profile-name-expansion feature flag can disable the change without a database rollback. The release dashboard already tracks profile_update_failed events and the support queue will be reviewed after rollout.",
+            "riskHints": ["operations"]
+        }
+    ],
+    "expectedFindings": [
+        {
+            "id": "finding-limited-punctuation-exploration",
+            "category": "testing",
+            "summary": "Manual exploratory QA did not sample every less-common supported punctuation combination, leaving a small testing coverage gap despite stronger automated validation coverage.",
+            "requiredEvidenceIds": ["ev-profile-ship-qa"],
+            "severity": "low"
+        }
+    ],
+    "authoring": {
+        "status": "draft",
+        "notes": "Difficulty-1 SHIP control for proportional release judgment. One legitimate low-severity testing concern remains, while shared validation, automated boundary coverage, rollback, and production monitoring support shipping."
+    }
+}

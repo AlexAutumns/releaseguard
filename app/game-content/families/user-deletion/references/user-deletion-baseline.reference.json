@@ -1,0 +1,28 @@
+{
+    "schemaVersion": 1,
+    "contentType": "family-reference",
+    "id": "reference-user-deletion-baseline",
+    "familyId": "family-user-deletion",
+    "title": "User Deletion Safe Baseline",
+    "purpose": "Defines expected authorization, testing, and traceability controls for destructive administrative user-deletion actions.",
+    "referenceArtifacts": [
+        {
+            "id": "ref-server-side-deletion-authorization",
+            "type": "implementation-reference",
+            "title": "Server-side authorization",
+            "body": "A destructive administrative user-deletion action must enforce the required administrator permission on the server route or service. Hiding the action in the user interface is not an authorization control."
+        },
+        {
+            "id": "ref-deletion-authorization-testing",
+            "type": "qa-reference",
+            "title": "Authorization testing",
+            "body": "Authorization testing should verify the destructive endpoint with both allowed and denied roles. UI visibility checks alone do not prove that the server rejects an unauthorized request."
+        },
+        {
+            "id": "ref-deletion-action-traceability",
+            "type": "operations-reference",
+            "title": "Destructive-action traceability",
+            "body": "Administrative user deletion should produce a durable audit record that identifies the acting account and the affected user so destructive actions can be investigated later."
+        }
+    ]
+}

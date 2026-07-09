@@ -23,6 +23,16 @@
     }
 }
 
+@keyframes rg-reduced-fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 /**
  * Explicit reduced-motion mode.
  *
@@ -72,11 +82,89 @@ html[data-rg-motion="reduced"] .rg-folder-sheet-stack > *,
 html[data-rg-motion="reduced"] .rg-notification-enter,
 html[data-rg-motion="reduced"] .rg-notification-leave {
     animation: rg-reduced-fade 160ms ease-out both !important;
-
     animation-delay: 0ms !important;
 }
 
+/**
+ * Investigation side folds keep the same open/closed state in reduced motion
+ * while replacing spatial furniture travel with a short fade.
+ */
+html[data-rg-motion="reduced"] .rg-investigation-workspace-grid {
+    transition-duration: 120ms !important;
+}
+
+html[data-rg-motion="reduced"] .rg-investigation-major-object,
+html[data-rg-motion="reduced"] .rg-investigation-rail {
+    animation: rg-reduced-fade 120ms ease-out both !important;
+    transform: none !important;
+}
+
+/**
+ * Severity selection keeps the same radio state in reduced motion while the
+ * investigator oval appears complete immediately.
+ */
+html[data-rg-motion="reduced"] .rg-casework-severity-oval__path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+}
+
+/**
+ * Verdict selection keeps the same chosen verdict in reduced motion while the
+ * ink impression appears complete immediately.
+ */
+html[data-rg-motion="reduced"]
+    .rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__impression {
+    animation: none !important;
+}
+
+/**
+ * Root route transitions keep their destination truth while replacing the
+ * normal scene movement with a short opacity-only transition.
+ */
 html[data-rg-motion="reduced"]::view-transition-old(root),
 html[data-rg-motion="reduced"]::view-transition-new(root) {
     animation: rg-reduced-fade 160ms ease-out both !important;
+}
+
+/**
+ * Reduced-motion Casework page changes keep the same leave/commit/enter
+ * lifecycle while replacing spatial sheet movement with opacity-only feedback.
+ */
+html[data-rg-motion="reduced"]
+    .rg-casework-page-stage[data-page-phase="leaving"] {
+    animation: rg-reduced-fade-out 120ms ease-out both !important;
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"]
+    .rg-casework-page-stage[data-page-phase="entering"] {
+    animation: rg-reduced-fade 120ms ease-out both !important;
+    transform: none !important;
+}
+
+/**
+ * Reduced-motion filed-report turns preserve the shared page lifecycle while
+ * replacing sheet travel and shadow sweeps with short opacity-only feedback.
+ */
+html[data-rg-motion="reduced"] .rg-report-page-stack::before,
+html[data-rg-motion="reduced"] .rg-report-page-stack::after {
+    transition-duration: 120ms !important;
+}
+
+html[data-rg-motion="reduced"]
+    .rg-report-page-stage[data-page-phase="leaving"] {
+    animation: rg-reduced-fade-out 120ms ease-out both !important;
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"]
+    .rg-report-page-stage[data-page-phase="entering"] {
+    animation: rg-reduced-fade 120ms ease-out both !important;
+    transform: none !important;
+}
+
+html[data-rg-motion="reduced"] .rg-report-shadow-sweep::before {
+    animation: none !important;
+    opacity: 0 !important;
 }

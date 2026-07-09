@@ -1,0 +1,102 @@
+{
+    "schemaVersion": 1,
+    "contentType": "release-ticket",
+    "id": "ticket-profile-display-name-limited-coverage",
+    "familyId": "family-profile-display-name",
+    "baselineReferenceId": "reference-profile-display-name-baseline",
+    "variantKind": "mixed-variant",
+    "title": "Profile Display Name Update",
+    "productArea": "Profile Settings",
+    "difficulty": 2,
+    "briefing": "The profile team wants to expand display names to 48 characters and support a wider range of real-world names. Client and server validation have been aligned, and the change can be disabled with an existing feature flag. Review whether the remaining release gaps justify stopping the rollout or monitoring it closely.",
+    "tags": ["account", "testing", "operations"],
+    "correctVerdict": "watch",
+    "introducedIssues": [
+        {
+            "id": "issue-incomplete-display-name-edge-coverage",
+            "referenceArtifactId": "ref-display-name-edge-case-validation",
+            "expectedFindingIds": [
+                "finding-incomplete-display-name-edge-coverage"
+            ],
+            "category": "testing",
+            "severity": "medium",
+            "summary": "QA validated common profile updates but did not exercise the exact new length boundary or representative expanded punctuation and international-name cases before release."
+        },
+        {
+            "id": "issue-limited-profile-update-observability",
+            "referenceArtifactId": "ref-display-name-rollout-observability",
+            "expectedFindingIds": [
+                "finding-limited-profile-update-observability"
+            ],
+            "category": "operations",
+            "severity": "low",
+            "summary": "The release has a feature-flag rollback path but no dedicated profile-update failure metric, so the team must rely on general API errors and support reports during rollout."
+        }
+    ],
+    "evidenceCards": [
+        {
+            "id": "ev-profile-watch-qa",
+            "type": "qa-note",
+            "title": "QA Compatibility Note",
+            "source": "QA Tester",
+            "body": "Common display-name updates passed in the profile form and account settings. QA tested names between 2 and 40 characters plus common apostrophes and hyphens. The exact 48-character boundary, 49-character rejection, and broader international-name cases were not included in this test pass because the release window was shortened.",
+            "riskHints": ["testing"]
+        },
+        {
+            "id": "ev-profile-watch-dev",
+            "type": "pull-request-comment",
+            "title": "Developer Validation Comment",
+            "source": "Pull Request Discussion",
+            "body": "The browser form and profile API now use the same validation contract with a 48-character maximum. The profile_name database column supports 120 characters. The release remains behind profile-name-expansion, but we do not have a dedicated profile-update failure metric yet; rollout checks will use the general API error dashboard and support queue.",
+            "riskHints": ["testing", "operations"],
+            "attachments": [
+                {
+                    "id": "attachment-profile-watch-validation",
+                    "type": "code",
+                    "language": "ts",
+                    "title": "Shared display-name validation",
+                    "body": "export const DISPLAY_NAME_MAX_LENGTH = 48;\n\nexport function isValidDisplayName(value: string): boolean {\n  const normalized = value.trim();\n\n  return (\n    normalized.length >= 1 &&\n    normalized.length <= DISPLAY_NAME_MAX_LENGTH &&\n    /^[\\p{L}\\p{M} .'-]+$/u.test(normalized)\n  );\n}\n\n// Imported by both the browser form and profile API.\nexport function validateProfileUpdate(input: ProfileUpdateInput) {\n  if (!isValidDisplayName(input.displayName)) {\n    return { ok: false, reason: \"invalid-display-name\" };\n  }\n\n  return { ok: true };\n}"
+                }
+            ]
+        },
+        {
+            "id": "ev-profile-watch-support",
+            "type": "support-ticket",
+            "title": "Name Rejection Summary",
+            "source": "Support Desk",
+            "body": "A small number of users reported that the current 32-character display-name limit rejects longer surnames or multi-part names. Support found no evidence of profile data loss or account access problems; the requests are primarily about name compatibility.",
+            "riskHints": ["privacy", "quality"]
+        },
+        {
+            "id": "ev-profile-watch-release",
+            "type": "release-note",
+            "title": "Release Note Draft",
+            "source": "Release Manager",
+            "body": "Expands profile display names to 48 characters and supports a wider set of common name formats. The change can be disabled through the existing profile-name-expansion feature flag. Release support will watch the general API error dashboard and profile-related support tickets during rollout.",
+            "riskHints": ["operations"]
+        }
+    ],
+    "expectedFindings": [
+        {
+            "id": "finding-incomplete-display-name-edge-coverage",
+            "category": "testing",
+            "summary": "The expanded validation rules were not tested at the exact new length boundary or across representative international-name cases before release.",
+            "requiredEvidenceIds": [
+                "ev-profile-watch-qa",
+                "ev-profile-watch-dev"
+            ],
+            "severity": "medium"
+        },
+        {
+            "id": "finding-limited-profile-update-observability",
+            "category": "operations",
+            "summary": "The change has a rollback flag but lacks a dedicated profile-update failure metric, reducing rollout visibility for a validation expansion.",
+            "requiredEvidenceIds": ["ev-profile-watch-dev"],
+            "severity": "low"
+        }
+    ],
+    "authoring": {
+        "status": "draft",
+        "notes": "Difficulty-2 WATCH variant. Shared validation, database capacity, and feature-flag rollback reduce release risk, while incomplete edge-case testing and limited dedicated observability justify close monitoring rather than HOLD."
+    }
+}

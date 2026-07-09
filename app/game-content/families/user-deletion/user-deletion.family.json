@@ -1,0 +1,8 @@
+{
+    "schemaVersion": 1,
+    "contentType": "ticket-family",
+    "id": "family-user-deletion",
+    "title": "User Deletion Family",
+    "description": "Tickets about destructive user-management actions, server-side authorization, authorization testing, and administrative traceability.",
+    "tags": ["security", "testing", "account"]
+}

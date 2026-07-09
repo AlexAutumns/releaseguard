@@ -5,7 +5,6 @@ import {
     type PointerEvent as ReactPointerEvent,
 } from "react";
 
-import { Button } from "../../components/ui/Button";
 import type { EvidenceCardDefinition } from "../../features/content/content-types";
 import type {
     BoardPosition,
@@ -118,17 +117,21 @@ export function BoardPinnedEvidenceCard({
         top: `${renderedPosition.yPercent}%`,
     };
 
+    /**
+     * Keeps thread-hover and active-anchor emphasis visible without turning the
+     * paper into a glowing application card.
+     */
     const paperStyle: CSSProperties = {
         ...positionStyle,
     };
 
     if (priorityThreadVisual) {
         paperStyle.borderColor = priorityThreadVisual.stroke;
-        paperStyle.boxShadow = [
-            `0 0 0 4px ${priorityThreadVisual.stroke}88`,
-            "0 18px 36px rgba(0,0,0,0.36)",
-        ].join(", ");
+        paperStyle.outline = `2px solid ${priorityThreadVisual.stroke}`;
+        paperStyle.outlineOffset = "1px";
     }
+
+    const paperStockClassName = getBoardPaperStockClassName(evidenceCard.id);
 
     /**
      * Starts an Arrange-mode drag operation.
@@ -263,18 +266,17 @@ export function BoardPinnedEvidenceCard({
         <>
             <article
                 className={cn(
-                    "absolute z-10 w-56 -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-rg-paper p-3 pt-8 text-rg-paper-ink shadow-xl shadow-black/35 transition",
+                    "rg-board-evidence-copy absolute z-10 h-[11.75rem] w-56 -translate-x-1/2 -translate-y-1/2 text-rg-paper-ink",
+                    paperStockClassName,
                     activeTool === "arrange"
                         ? "cursor-grab active:cursor-grabbing"
                         : "cursor-pointer",
                     isArrangeDragging &&
                         "z-30 scale-[1.015] shadow-2xl shadow-black/45",
-                    priorityThreadVisual
-                        ? "z-20"
-                        : isSelected
-                          ? "border-rg-amber ring-2 ring-rg-amber/70"
-                          : "border-rg-folder-dark/40 hover:border-rg-amber/65",
+                    priorityThreadVisual && "z-20",
                 )}
+                data-board-pinned-card="true"
+                data-selected={isSelected ? "true" : "false"}
                 onClick={(event) => {
                     event.stopPropagation();
 
@@ -303,30 +305,33 @@ export function BoardPinnedEvidenceCard({
                     isThreadEndpointHighlighted: Boolean(highlightedThreadId),
                 })}
             >
-                <div
-                    aria-hidden="true"
-                    className="rg-paper-grain pointer-events-none absolute inset-0 rounded-2xl opacity-35"
-                />
-
-                <div className="relative z-10">
-                    <div className="mb-2 min-w-0 text-left">
-                        <p className="line-clamp-2 text-sm font-black leading-5 text-rg-paper-ink">
+                <div className="grid h-full grid-rows-[2.75rem_1.6rem_minmax(0,1fr)_1.85rem] px-3.5 pb-2.5 pt-7">
+                    <header className="min-w-0 overflow-hidden">
+                        <p className="line-clamp-2 font-case text-[0.8rem] font-bold leading-[0.98rem] text-rg-paper-ink">
                             {evidenceCard.title}
                         </p>
+                    </header>
 
-                        <p className="mt-1 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-rg-paper-muted">
+                    <div className="flex min-w-0 items-center justify-between gap-2 border-b border-rg-folder-dark/25 pb-1">
+                        <p className="min-w-0 truncate font-mono text-[0.58rem] uppercase tracking-[0.09em] text-rg-paper-muted">
                             {evidenceCard.source}
+                        </p>
+
+                        <span className="shrink-0 font-mono text-[0.54rem] font-bold uppercase tracking-[0.07em] text-rg-paper-muted/85">
+                            {evidenceTypeLabelById[evidenceCard.type]}
+                        </span>
+                    </div>
+
+                    <div className="min-h-0 overflow-hidden pt-2">
+                        <p className="line-clamp-3 font-case text-xs leading-[1.05rem] text-rg-paper-muted">
+                            {evidenceCard.body}
                         </p>
                     </div>
 
-                    <p className="line-clamp-3 text-xs leading-5 text-rg-paper-muted">
-                        {evidenceCard.body}
-                    </p>
-
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                        <Button
+                    <footer className="flex items-end justify-end border-t border-rg-folder-dark/25 pt-1">
+                        <button
                             aria-label="Inspect pinned evidence"
-                            className="h-8 w-10 px-0"
+                            className="rg-board-copy-action"
                             onClick={(event) => {
                                 event.stopPropagation();
                                 onInspect();
@@ -334,13 +339,12 @@ export function BoardPinnedEvidenceCard({
                             onPointerDown={(event) => {
                                 event.stopPropagation();
                             }}
-                            size="sm"
                             title="Inspect pinned evidence"
-                            variant="secondary"
+                            type="button"
                         >
-                            ⌕
-                        </Button>
-                    </div>
+                            Inspect
+                        </button>
+                    </footer>
                 </div>
             </article>
 
@@ -351,8 +355,8 @@ export function BoardPinnedEvidenceCard({
             >
                 {!isArrangeDragging && (
                     <button
-                        aria-label="Remove pinned evidence from board"
-                        className="pointer-events-auto absolute left-1/2 top-0 z-[35] flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-rg-stamp bg-rg-stamp text-sm font-black text-rg-paper shadow-md shadow-black/25 transition hover:-translate-y-[60%] hover:border-rg-amber hover:bg-rg-stamp hover:text-rg-paper hover:shadow-lg hover:shadow-rg-stamp/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rg-amber"
+                        aria-label="Pull this pin from the board"
+                        className="rg-board-tack pointer-events-auto absolute left-1/2 top-0 z-[35] -translate-x-1/2 -translate-y-1/2"
                         onClick={(event) => {
                             event.stopPropagation();
                             onUnpin();
@@ -363,19 +367,29 @@ export function BoardPinnedEvidenceCard({
                         title="Pull this pin from the board"
                         type="button"
                     >
-                        ×
+                        <span
+                            aria-hidden="true"
+                            className={cn(
+                                "rg-board-tack__head",
+                                priorityThreadVisual && "ring-4",
+                                priorityThreadVisual?.anchorRingClass,
+                            )}
+                        />
+                        <span aria-hidden="true" className="rg-board-tack__cue">
+                            Pull
+                        </span>
                     </button>
                 )}
 
                 {visibleThreadIds.length > 0 && (
                     <div
                         aria-hidden="true"
-                        className="absolute right-2 top-2 z-[34] flex max-w-[4.8rem] items-center justify-center gap-1 rounded-full border border-rg-folder-dark/20 bg-rg-paper/90 px-1.5 py-0.5 shadow-sm shadow-black/10"
+                        className="rg-board-thread-endpoints absolute right-2 top-2 z-[34]"
                         title="Thread endpoints attached to this pinned card."
                     >
                         {visibleThreadIds.slice(0, 5).map((threadId) => (
                             <span
-                                className="h-2 w-2 rounded-full border border-black/30"
+                                className="rg-board-thread-endpoint"
                                 key={threadId}
                                 style={{
                                     backgroundColor:
@@ -388,6 +402,40 @@ export function BoardPinnedEvidenceCard({
             </div>
         </>
     );
+}
+
+/**
+ * Stable paper-stock choices for pinned Board working copies.
+ *
+ * The visual stock is derived from the authored evidence ID rather than the
+ * evidence type, so paper colour remains decorative and never becomes a hidden
+ * gameplay category code.
+ */
+const boardPaperStockClassNames = [
+    "rg-board-evidence-copy--cream",
+    "rg-board-evidence-copy--cool",
+    "rg-board-evidence-copy--buff",
+    "rg-board-evidence-copy--golden",
+] as const;
+
+const evidenceTypeLabelById: Record<EvidenceCardDefinition["type"], string> = {
+    "qa-note": "QA Note",
+    "pull-request-comment": "PR Comment",
+    "support-ticket": "Support",
+    "release-note": "Release Note",
+};
+
+/**
+ * Returns one deterministic Board paper stock for an evidence working copy.
+ */
+function getBoardPaperStockClassName(evidenceId: string): string {
+    let hash = 0;
+
+    for (let index = 0; index < evidenceId.length; index += 1) {
+        hash = (hash * 31 + evidenceId.charCodeAt(index)) % 997;
+    }
+
+    return boardPaperStockClassNames[hash % boardPaperStockClassNames.length];
 }
 
 interface GetPinnedCardTitleInput {

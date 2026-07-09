@@ -304,3 +304,24 @@
 .rg-folder-interactive:active .rg-folder-action {
     transform: translate3d(1px, 1px, 0);
 }
+
+/**
+ * Locked folder state.
+ *
+ * Locked case files keep the same stock material and proportions as active
+ * folders while using a darker, less saturated treatment that reads as inactive
+ * without flattening the object through whole-element opacity.
+ */
+.rg-folder-shell--locked .rg-folder-tab,
+.rg-folder-shell--locked .rg-folder-body {
+    filter: brightness(0.72) saturate(0.58);
+}
+
+.rg-folder-shell--locked .rg-folder-action {
+    border-color: rgb(142 111 67 / 46%);
+    color: rgb(210 190 153 / 74%);
+}
+
+.rg-folder-shell--locked .rg-folder-action::before {
+    background: rgb(142 111 67 / 62%);
+}

@@ -32,6 +32,11 @@ import {
 import type { InvestigationToolId } from "../../features/gameplay/tools/tool-types";
 import { saveTicketScoreResult } from "../../features/gameplay/results/ticket-result-storage";
 import { scoreTicketAttempt } from "../../features/gameplay/scoring/scoring-engine";
+import { completeShiftRunTicket } from "../../features/gameplay/shift-run/shift-run-rules";
+import {
+    loadIncompleteShiftRunByShiftId,
+    saveShiftRun,
+} from "../../features/gameplay/shift-run/shift-run-storage";
 
 export interface UseInvestigationControllerInput {
     shift: ShiftDefinition;
@@ -773,11 +778,11 @@ export function useInvestigationController({
     }, []);
 
     /**
-     * Scores and saves the current ticket attempt.
+     * Scores and saves the current ticket attempt, then advances its owning
+     * Shift Run when the ticket was opened through persisted shift progression.
      *
-     * The controller deliberately returns the attempt ID instead of navigating.
-     * This keeps routing inside the screen layer and keeps scoring/storage as
-     * explicit steps.
+     * Ticket Result persistence happens first. Shift progression advances only
+     * after that immutable result exists and is saved successfully.
      */
     const submitTicketReport = useCallback(() => {
         if (!canSubmitReport) {
@@ -792,18 +797,19 @@ export function useInvestigationController({
             return null;
         }
 
+        const submittedAt = new Date().toISOString();
         const result = scoreTicketAttempt({
             attempt,
-            submittedAt: new Date().toISOString(),
+            submittedAt,
             ticket,
         });
 
-        const storageResult = saveTicketScoreResult(result);
+        const ticketResultStorageResult = saveTicketScoreResult(result);
 
-        if (!storageResult.ok) {
+        if (!ticketResultStorageResult.ok) {
             pushNotification({
                 fingerprint: "submit-report:storage-failed",
-                message: storageResult.message,
+                message: ticketResultStorageResult.message,
                 title: "Report could not be saved",
                 tone: "danger",
             });
@@ -811,15 +817,65 @@ export function useInvestigationController({
             return null;
         }
 
+        const shiftRunLoadResult = loadIncompleteShiftRunByShiftId(shift.id);
+
+        if (!shiftRunLoadResult.ok) {
+            pushNotification({
+                fingerprint: "submit-report:shift-run-load-failed",
+                message: `${shiftRunLoadResult.message} The saved ticket report was kept, but shift progress did not advance. Submit the report again after the progression problem is resolved.`,
+                title: "Shift progress could not be read",
+                tone: "danger",
+            });
+
+            return null;
+        }
+
+        const shiftRun = shiftRunLoadResult.value;
+
+        if (shiftRun) {
+            const completionResult = completeShiftRunTicket({
+                shiftRun,
+                ticketId: ticket.id,
+                attemptId: attempt.context.attemptId,
+                completedAt: submittedAt,
+            });
+
+            if (!completionResult.ok) {
+                pushNotification({
+                    fingerprint: `submit-report:shift-run-rejected:${completionResult.issue.code}`,
+                    message: `${completionResult.issue.message} The saved ticket report was kept, but shift progress did not advance.`,
+                    title: "Shift progress could not advance",
+                    tone: "danger",
+                });
+
+                return null;
+            }
+
+            const shiftRunStorageResult = saveShiftRun(completionResult.value);
+
+            if (!shiftRunStorageResult.ok) {
+                pushNotification({
+                    fingerprint: "submit-report:shift-run-storage-failed",
+                    message: `${shiftRunStorageResult.message} The saved ticket report was kept, but shift progress did not advance. Submit the report again after the storage problem is resolved.`,
+                    title: "Shift progress could not be saved",
+                    tone: "danger",
+                });
+
+                return null;
+            }
+        }
+
         pushNotification({
             fingerprint: `submit-report:saved:${attempt.context.attemptId}`,
-            message: "The ticket report has been scored and saved locally.",
+            message: shiftRun
+                ? "The ticket report and shift progress have been saved locally."
+                : "The standalone ticket report has been scored and saved locally.",
             title: "Report submitted",
             tone: "success",
         });
 
         return attempt.context.attemptId;
-    }, [attempt, canSubmitReport, pushNotification, ticket]);
+    }, [attempt, canSubmitReport, pushNotification, shift.id, ticket]);
 
     const undoLastAction = useCallback(() => {
         dispatch({

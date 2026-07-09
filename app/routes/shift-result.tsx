@@ -17,10 +17,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 /**
- * Shift result route.
- *
- * Real shift run loading will be added after shift progression and save data
- * exist.
+ * Shift Result route for one persisted completed Shift Run.
  */
 export default function ShiftResultRoute() {
     const params = useParams();

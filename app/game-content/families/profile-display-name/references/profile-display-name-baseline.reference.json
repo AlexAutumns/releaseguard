@@ -1,0 +1,28 @@
+{
+    "schemaVersion": 1,
+    "contentType": "family-reference",
+    "id": "reference-profile-display-name-baseline",
+    "familyId": "family-profile-display-name",
+    "title": "Profile Display Name Safe Baseline",
+    "purpose": "Defines expected validation, edge-case coverage, and release observability for profile display-name changes.",
+    "referenceArtifacts": [
+        {
+            "id": "ref-shared-display-name-validation",
+            "type": "implementation-reference",
+            "title": "Shared validation contract",
+            "body": "Profile display-name rules should remain aligned between the client and server. The server must enforce the accepted length and character rules rather than relying only on the browser interface."
+        },
+        {
+            "id": "ref-display-name-edge-case-validation",
+            "type": "qa-reference",
+            "title": "Edge-case validation",
+            "body": "Display-name changes should test the exact supported length boundary and representative punctuation or international-name cases so expanded validation rules are verified beyond the common happy path."
+        },
+        {
+            "id": "ref-display-name-rollout-observability",
+            "type": "operations-reference",
+            "title": "Rollout observability",
+            "body": "A display-name validation change should have a practical rollback path and enough production visibility to identify profile-update failures after release."
+        }
+    ]
+}

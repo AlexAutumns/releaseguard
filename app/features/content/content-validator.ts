@@ -7,6 +7,7 @@ import type {
     FamilyReferenceDefinition,
     IntroducedIssueDefinition,
     ReleaseTicketDefinition,
+    ShiftDefinition,
 } from "./content-types";
 
 /**
@@ -67,10 +68,33 @@ function createIdMap<TContent extends { id: string }>(
 }
 
 /**
- * Validates that every expected finding points to evidence cards that exist in
- * the same ticket.
+ * Creates the normalized scoring signature used to distinguish expected findings.
+ *
+ * Scoring matches by category and required evidence presence. Evidence order does
+ * not affect that rule, so the authored IDs are de-duplicated and sorted before
+ * the signature is created.
  */
-function validateExpectedFindingEvidenceReferences(
+function createExpectedFindingScoringSignature(
+    expectedFinding: ExpectedFindingDefinition,
+): string {
+    const normalizedRequiredEvidenceIds = [
+        ...new Set(expectedFinding.requiredEvidenceIds),
+    ].sort();
+
+    return JSON.stringify([
+        expectedFinding.category,
+        normalizedRequiredEvidenceIds,
+    ]);
+}
+
+/**
+ * Validates the evidence requirements used to score expected findings.
+ *
+ * Every expected finding must require real, unique evidence from the same
+ * ticket. Empty or repeated requirements would create ambiguous answer keys and
+ * misleading result-report rows.
+ */
+function validateExpectedFindingEvidenceRequirements(
     issues: ContentValidationIssue[],
     ticket: ReleaseTicketDefinition,
 ): void {
@@ -81,7 +105,25 @@ function validateExpectedFindingEvidenceReferences(
     );
 
     for (const expectedFinding of ticket.expectedFindings) {
+        if (expectedFinding.requiredEvidenceIds.length === 0) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: ticket.id,
+                message: `Expected finding "${expectedFinding.id}" must require at least one evidence card.`,
+            });
+        }
+
+        const seenRequiredEvidenceIds = new Set<string>();
+        const duplicateRequiredEvidenceIds = new Set<string>();
+
         for (const requiredEvidenceId of expectedFinding.requiredEvidenceIds) {
+            if (seenRequiredEvidenceIds.has(requiredEvidenceId)) {
+                duplicateRequiredEvidenceIds.add(requiredEvidenceId);
+                continue;
+            }
+
+            seenRequiredEvidenceIds.add(requiredEvidenceId);
+
             if (!evidenceIds.has(requiredEvidenceId)) {
                 addIssue(issues, {
                     severity: "error",
@@ -90,6 +132,48 @@ function validateExpectedFindingEvidenceReferences(
                 });
             }
         }
+
+        for (const duplicateRequiredEvidenceId of [
+            ...duplicateRequiredEvidenceIds,
+        ].sort()) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: ticket.id,
+                message: `Expected finding "${expectedFinding.id}" contains duplicate required evidence "${duplicateRequiredEvidenceId}".`,
+            });
+        }
+    }
+}
+
+/**
+ * Rejects expected findings that the scoring engine cannot distinguish.
+ *
+ * Two expected findings with the same category and required evidence set are
+ * equivalent to the current deterministic match rule, even when evidence IDs
+ * are authored in a different order.
+ */
+function validateExpectedFindingScoringSignatures(
+    issues: ContentValidationIssue[],
+    ticket: ReleaseTicketDefinition,
+): void {
+    const expectedFindingIdBySignature = new Map<string, string>();
+
+    for (const expectedFinding of ticket.expectedFindings) {
+        const scoringSignature =
+            createExpectedFindingScoringSignature(expectedFinding);
+        const existingExpectedFindingId =
+            expectedFindingIdBySignature.get(scoringSignature);
+
+        if (existingExpectedFindingId) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: ticket.id,
+                message: `Expected finding "${expectedFinding.id}" duplicates the scoring signature of "${existingExpectedFindingId}": category "${expectedFinding.category}" with the same required evidence set.`,
+            });
+            continue;
+        }
+
+        expectedFindingIdBySignature.set(scoringSignature, expectedFinding.id);
     }
 }
 
@@ -213,11 +297,11 @@ function validateFamilyReference(
 }
 
 /**
- * Validates introduced issues against the ticket's baseline reference and
- * expected findings.
+ * Validates introduced issues against the ticket baseline and answer key.
  *
- * Introduced issues are authoring metadata, not scoring rules. These checks make
- * sure that metadata stays connected to the real answer key.
+ * Introduced issues remain authoring metadata rather than scoring rules. The
+ * validator keeps that metadata aligned with every linked expected finding and
+ * ensures risk-bearing ticket variants do not contain orphan answer-key items.
  */
 function validateIntroducedIssues(
     issues: ContentValidationIssue[],
@@ -248,10 +332,8 @@ function validateIntroducedIssues(
         });
     }
 
-    const expectedFindingIds = new Set(
-        ticket.expectedFindings.map((expectedFinding) => expectedFinding.id),
-    );
-
+    const expectedFindingById = createIdMap(ticket.expectedFindings);
+    const linkedExpectedFindingIds = new Set<string>();
     const referenceArtifactIds = new Set(
         familyReference?.referenceArtifacts.map((artifact) => artifact.id) ??
             [],
@@ -270,14 +352,140 @@ function validateIntroducedIssues(
         }
 
         for (const expectedFindingId of introducedIssue.expectedFindingIds) {
-            if (!expectedFindingIds.has(expectedFindingId)) {
+            const expectedFinding = expectedFindingById.get(expectedFindingId);
+
+            if (!expectedFinding) {
                 addIssue(issues, {
                     severity: "error",
                     contentId: ticket.id,
                     message: `Introduced issue "${introducedIssue.id}" references missing expected finding "${expectedFindingId}".`,
                 });
+                continue;
+            }
+
+            linkedExpectedFindingIds.add(expectedFindingId);
+
+            if (introducedIssue.category !== expectedFinding.category) {
+                addIssue(issues, {
+                    severity: "error",
+                    contentId: ticket.id,
+                    message: `Introduced issue "${introducedIssue.id}" category "${introducedIssue.category}" does not match linked expected finding "${expectedFinding.id}" category "${expectedFinding.category}".`,
+                });
+            }
+
+            if (introducedIssue.severity !== expectedFinding.severity) {
+                addIssue(issues, {
+                    severity: "error",
+                    contentId: ticket.id,
+                    message: `Introduced issue "${introducedIssue.id}" severity "${introducedIssue.severity}" does not match linked expected finding "${expectedFinding.id}" severity "${expectedFinding.severity}".`,
+                });
             }
         }
+    }
+
+    if (
+        ticket.variantKind === "risk-variant" ||
+        ticket.variantKind === "mixed-variant"
+    ) {
+        for (const expectedFinding of ticket.expectedFindings) {
+            if (!linkedExpectedFindingIds.has(expectedFinding.id)) {
+                addIssue(issues, {
+                    severity: "error",
+                    contentId: ticket.id,
+                    message: `Expected finding "${expectedFinding.id}" is not linked from any introduced issue.`,
+                });
+            }
+        }
+    }
+}
+
+/**
+ * Validates authored ticket assignments inside one shift.
+ *
+ * Shifts must contain a non-empty, duplicate-free ticket sequence, and every
+ * real assigned ticket must stay inside the shift's declared difficulty band.
+ */
+function validateShiftTicketAssignments(
+    issues: ContentValidationIssue[],
+    shift: ShiftDefinition,
+    ticketById: Map<string, ReleaseTicketDefinition>,
+): void {
+    if (shift.ticketIds.length === 0) {
+        addIssue(issues, {
+            severity: "error",
+            contentId: shift.id,
+            message: "Shift must contain at least one ticket.",
+        });
+    }
+
+    const seenTicketIds = new Set<string>();
+    const duplicateTicketIds = new Set<string>();
+    const [minimumDifficulty, maximumDifficulty] = shift.difficultyBand;
+
+    for (const ticketId of shift.ticketIds) {
+        if (seenTicketIds.has(ticketId)) {
+            duplicateTicketIds.add(ticketId);
+            continue;
+        }
+
+        seenTicketIds.add(ticketId);
+
+        const ticket = ticketById.get(ticketId);
+
+        if (!ticket) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: shift.id,
+                message: `Shift references missing ticket "${ticketId}".`,
+            });
+            continue;
+        }
+
+        if (
+            ticket.difficulty < minimumDifficulty ||
+            ticket.difficulty > maximumDifficulty
+        ) {
+            addIssue(issues, {
+                severity: "error",
+                contentId: shift.id,
+                message: `Ticket "${ticket.id}" difficulty ${ticket.difficulty} falls outside shift difficulty band ${minimumDifficulty}-${maximumDifficulty}.`,
+            });
+        }
+    }
+
+    for (const duplicateTicketId of [...duplicateTicketIds].sort()) {
+        addIssue(issues, {
+            severity: "error",
+            contentId: shift.id,
+            message: `Duplicate ticket ID "${duplicateTicketId}" found in shift.`,
+        });
+    }
+}
+
+/**
+ * Warns when the bundled content pack has not yet reached its authored minimums.
+ *
+ * Manifest minimums describe roadmap/content targets rather than structural
+ * validity, so falling below them must remain non-blocking during development.
+ */
+function validateManifestMinimumContentCounts(
+    issues: ContentValidationIssue[],
+    catalog: ContentCatalog,
+): void {
+    if (catalog.tickets.length < catalog.manifest.minimumTicketVariants) {
+        addIssue(issues, {
+            severity: "warning",
+            contentId: catalog.manifest.contentPackId,
+            message: `Content pack contains ${catalog.tickets.length} ticket variant(s), below manifest minimum ${catalog.manifest.minimumTicketVariants}.`,
+        });
+    }
+
+    if (catalog.shifts.length < catalog.manifest.minimumShifts) {
+        addIssue(issues, {
+            severity: "warning",
+            contentId: catalog.manifest.contentPackId,
+            message: `Content pack contains ${catalog.shifts.length} shift(s), below manifest minimum ${catalog.manifest.minimumShifts}.`,
+        });
     }
 }
 
@@ -293,12 +501,15 @@ export function validateContentCatalog(
     const issues: ContentValidationIssue[] = [];
 
     const familyIds = new Set(catalog.families.map((family) => family.id));
-    const ticketIds = new Set(catalog.tickets.map((ticket) => ticket.id));
+    const ticketById = createIdMap(catalog.tickets);
     const shiftIds = new Set(catalog.shifts.map((shift) => shift.id));
     const narrativeIds = new Set(
         catalog.narrativeSequences.map((sequence) => sequence.id),
     );
+
     const familyReferenceById = createIdMap(catalog.familyReferences);
+
+    validateManifestMinimumContentCounts(issues, catalog);
 
     for (const duplicateFamilyId of findDuplicateIds(catalog.families)) {
         addIssue(issues, {
@@ -376,21 +587,14 @@ export function validateContentCatalog(
         }
 
         validateTicketInternalIds(issues, ticket);
-        validateExpectedFindingEvidenceReferences(issues, ticket);
+        validateExpectedFindingEvidenceRequirements(issues, ticket);
+        validateExpectedFindingScoringSignatures(issues, ticket);
         validateExpectedConfirmationEvidenceReferences(issues, ticket);
         validateIntroducedIssues(issues, ticket, familyReference);
     }
 
     for (const shift of catalog.shifts) {
-        for (const ticketId of shift.ticketIds) {
-            if (!ticketIds.has(ticketId)) {
-                addIssue(issues, {
-                    severity: "error",
-                    contentId: shift.id,
-                    message: `Shift references missing ticket "${ticketId}".`,
-                });
-            }
-        }
+        validateShiftTicketAssignments(issues, shift, ticketById);
 
         if (
             shift.introNarrativeId &&

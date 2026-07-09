@@ -17,9 +17,10 @@ export function meta({}: Route.MetaArgs) {
 }
 
 /**
- * Ticket result route.
+ * Ticket Result route for one saved submitted-attempt snapshot.
  *
- * Real attempt loading will be added once the local save repository exists.
+ * TicketResultScreen performs client-side loading because the result repository
+ * uses browser localStorage and the application still supports SSR builds.
  */
 export default function TicketResultRoute() {
     const params = useParams();

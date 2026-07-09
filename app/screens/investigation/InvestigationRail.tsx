@@ -1,59 +1,63 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { Button } from "../../components/ui/Button";
-import { cn } from "../../lib/cn";
+type InvestigationRailIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
 export interface InvestigationRailProps {
+    disabled?: boolean;
     side: "left" | "right";
-    icon: string;
+    icon: InvestigationRailIcon;
     label: string;
     meta?: ReactNode;
     onOpen: () => void;
 }
 
 /**
- * Collapsed side rail for the investigation workspace.
+ * Full-height control for reopening one folded Investigation work area.
  *
- * The rail keeps folded panels discoverable while giving the main board more
- * room. The open button stays at the top so collapse and expand controls feel
- * spatially consistent.
+ * The whole visible spine is one semantic button so the physical furniture edge
+ * and its interaction target agree. The component owns no open/closed state; it
+ * only presents the current collapsed workspace state supplied by its parent.
  */
 export function InvestigationRail({
+    disabled = false,
     side,
-    icon,
+    icon: Icon,
     label,
     meta,
     onOpen,
 }: InvestigationRailProps) {
+    const DirectionIcon = side === "left" ? ChevronRight : ChevronLeft;
+
     return (
-        <aside
-            className={cn(
-                "flex min-h-0 w-12 flex-col items-center rounded-2xl border border-rg-border bg-rg-surface/92 p-2 shadow-xl shadow-black/35",
-                side === "left" ? "order-first" : "order-last",
-            )}
+        <button
+            aria-label={`Open ${label}`}
+            className="rg-investigation-rail"
+            data-side={side}
+            disabled={disabled}
+            onClick={onOpen}
+            title={
+                disabled
+                    ? "Finish turning the Notepad page first."
+                    : `Open ${label}`
+            }
+            type="button"
         >
-            <Button
-                aria-label={`Open ${label}`}
-                className="h-8 w-8 px-0"
-                onClick={onOpen}
-                size="sm"
-                title={`Open ${label}`}
-                variant="secondary"
-            >
-                {side === "left" ? "→" : "←"}
-            </Button>
+            <span aria-hidden="true" className="rg-investigation-rail__arrow">
+                <DirectionIcon className="h-4 w-4" strokeWidth={2.3} />
+            </span>
 
-            <div className="mt-3 flex flex-1 flex-col items-center gap-3 overflow-hidden">
-                <span className="text-lg" aria-hidden="true">
-                    {icon}
-                </span>
+            <Icon
+                aria-hidden="true"
+                className="rg-investigation-rail__icon h-4 w-4"
+                strokeWidth={2}
+            />
 
-                <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-rg-muted [writing-mode:vertical-rl]">
-                    {label}
-                </p>
+            <span className="rg-investigation-rail__label">{label}</span>
 
-                {meta && <div className="mt-1">{meta}</div>}
-            </div>
-        </aside>
+            {meta && (
+                <span className="rg-investigation-rail__meta">{meta}</span>
+            )}
+        </button>
     );
 }

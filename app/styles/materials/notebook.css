@@ -1,43 +1,46 @@
 /**
- * ReleaseGuard investigator notebook material.
+ * ReleaseGuard investigator Notepad material.
  *
- * This file owns ruled notebook paper and its margin-line/fibre treatment.
+ * This file owns the physical Casework Notepad backing, ruled writing sheet,
+ * page-turn presentation, section index tabs, and paper-native finding interactions.
  * Official case documents remain in materials/paper.css.
  */
 
 /**
  * Notebook ruling is a distinct paper family.
  *
- * The 2rem rule step is intentionally compatible with handwritten note rhythm.
- * This texture must not be used for release tickets or official reports.
+ * The rule and margin colours are variables so the active Casework sheet can use
+ * a quieter line treatment without duplicating the material background stack.
  */
 .rg-notepad-texture {
     --rg-notepad-line-step: 2rem;
+    --rg-notepad-rule-color: rgb(112 87 54 / 20%);
+    --rg-notepad-margin-color: rgb(161 61 45 / 31%);
 
     background-image:
         repeating-linear-gradient(
             to bottom,
             transparent 0,
             transparent calc(var(--rg-notepad-line-step) - 1px),
-            rgb(112 87 54 / 27%) calc(var(--rg-notepad-line-step) - 1px),
-            rgb(112 87 54 / 27%) var(--rg-notepad-line-step)
+            var(--rg-notepad-rule-color) calc(var(--rg-notepad-line-step) - 1px),
+            var(--rg-notepad-rule-color) var(--rg-notepad-line-step)
         ),
         linear-gradient(
             90deg,
             transparent 0,
             transparent 3.25rem,
-            rgb(161 61 45 / 31%) 3.25rem,
-            rgb(161 61 45 / 31%) calc(3.25rem + 1px),
+            var(--rg-notepad-margin-color) 3.25rem,
+            var(--rg-notepad-margin-color) calc(3.25rem + 1px),
             transparent calc(3.25rem + 1px)
         ),
         radial-gradient(
             circle at 18% 28%,
-            rgb(54 36 20 / 6%) 0 0.7px,
+            rgb(54 36 20 / 5%) 0 0.7px,
             transparent 1px
         ),
         radial-gradient(
             circle at 78% 66%,
-            rgb(54 36 20 / 4%) 0 0.6px,
+            rgb(54 36 20 / 3%) 0 0.6px,
             transparent 1px
         );
 
@@ -52,4 +55,1142 @@
         100% 100%,
         101px 109px,
         137px 129px;
+}
+
+/**
+ * Dark physical Casework Notepad backing.
+ *
+ * The shell is the Notepad object. It is intentionally not ruled writing paper;
+ * the active scrolling sheet owns the paper texture below.
+ */
+.rg-casework-notepad-shell {
+    position: relative;
+    overflow: hidden;
+
+    border: 1px solid rgb(111 92 51 / 72%);
+    border-radius: 0.48rem;
+
+    background-color: rgb(29 30 24);
+    background-image:
+        repeating-linear-gradient(
+            90deg,
+            rgb(226 200 139 / 3%) 0 1px,
+            transparent 1px 7px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            rgb(0 0 0 / 7%) 0 1px,
+            transparent 1px 6px
+        ),
+        radial-gradient(
+            ellipse at 18% 8%,
+            rgb(146 126 70 / 13%),
+            transparent 38%
+        ),
+        radial-gradient(ellipse at 84% 78%, rgb(0 0 0 / 28%), transparent 45%),
+        linear-gradient(145deg, rgb(49 49 37), rgb(31 32 26) 52%, rgb(20 21 18));
+
+    background-size:
+        11px 100%,
+        100% 9px,
+        100% 100%,
+        100% 100%,
+        100% 100%;
+
+    color: var(--color-rg-text);
+
+    box-shadow:
+        inset 0.5rem 0 0 rgb(10 10 8 / 36%),
+        inset 0 1px 0 rgb(235 214 163 / 7%),
+        inset -1px 0 0 rgb(0 0 0 / 28%),
+        0.45rem 0.7rem 1.5rem rgb(0 0 0 / 30%);
+}
+
+.rg-casework-notepad-shell::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 0;
+
+    width: 0.5rem;
+
+    background: linear-gradient(
+        90deg,
+        rgb(10 10 8 / 72%),
+        rgb(86 72 40 / 22%) 58%,
+        rgb(8 8 7 / 54%)
+    );
+
+    box-shadow:
+        inset -1px 0 0 rgb(208 177 105 / 10%),
+        2px 0 5px rgb(0 0 0 / 18%);
+
+    content: "";
+    pointer-events: none;
+}
+
+.rg-casework-notepad-shell > * {
+    position: relative;
+    z-index: 1;
+}
+
+/**
+ * Actual scrolling Casework writing sheet.
+ *
+ * The sheet has no rounded inset-card edge. It fills the page stage as one paper
+ * surface, and its ruling scrolls together with the form content.
+ */
+.rg-casework-sheet {
+    --rg-notepad-rule-color: rgb(93 70 41 / 11%);
+    --rg-notepad-margin-color: rgb(145 54 43 / 30%);
+
+    min-height: 100%;
+
+    border: 0;
+    border-radius: 0.38rem;
+
+    background-color: var(--color-rg-notepad-strong);
+    color: var(--color-rg-paper-ink);
+
+    box-shadow:
+        0 0.2rem 0.6rem rgb(19 10 6 / 11%),
+        inset 0 1px 0 rgb(255 248 218 / 18%);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Casework Notepad page movement                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Overlapping section-index rail for the three fixed Casework Notepad pages.
+ *
+ * The tabs use natural content widths, overlap like attached divider markers,
+ * and meet the active paper sheet directly. The shared pager still owns page
+ * lifecycle and navigation truth.
+ */
+.rg-casework-bookmarks {
+    display: flex;
+    min-width: 0;
+    align-items: end;
+    padding-inline-end: 0.75rem;
+}
+
+/**
+ * One physical section index attached to the top edge of the Notepad sheet.
+ *
+ * Negative sibling margins create restrained overlap without requiring page-
+ * specific positioning or decorative random rotation.
+ */
+.rg-casework-bookmark {
+    position: relative;
+
+    display: inline-flex;
+    min-width: 5.8rem;
+    min-height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgb(82 56 31 / 68%);
+    border-bottom-color: rgb(82 56 31 / 82%);
+    border-radius: 0.48rem 0.48rem 0.1rem 0.1rem;
+    padding: 0.5rem 0.9rem 0.42rem;
+
+    color: var(--color-rg-paper-ink);
+
+    background: linear-gradient(
+        180deg,
+        rgb(187 155 98 / 96%),
+        rgb(164 133 84 / 96%)
+    );
+
+    box-shadow:
+        inset 0 1px rgb(255 244 211 / 16%),
+        0 0.15rem 0.28rem rgb(32 20 12 / 18%);
+
+    font-family: var(--font-case);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        box-shadow var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-bookmark + .rg-casework-bookmark {
+    margin-inline-start: -0.55rem;
+}
+
+.rg-casework-bookmark:nth-child(1) {
+    z-index: 1;
+}
+
+.rg-casework-bookmark:nth-child(2) {
+    z-index: 2;
+}
+
+.rg-casework-bookmark:nth-child(3) {
+    z-index: 3;
+}
+
+.rg-casework-bookmark:hover,
+.rg-casework-bookmark:focus-visible {
+    border-color: rgb(111 76 35 / 88%);
+
+    background: linear-gradient(
+        180deg,
+        rgb(199 164 101 / 98%),
+        rgb(177 142 87 / 98%)
+    );
+}
+
+.rg-casework-bookmark:focus-visible {
+    outline: 2px solid var(--color-rg-amber);
+    outline-offset: 2px;
+}
+
+.rg-casework-bookmark[data-selected="true"] {
+    z-index: 10;
+
+    border-color: rgb(95 63 27 / 92%);
+    border-bottom-color: transparent;
+
+    background: linear-gradient(
+        180deg,
+        rgb(211 176 108 / 100%) 0%,
+        var(--color-rg-notepad-strong) 88%
+    );
+
+    box-shadow:
+        inset 0 1px rgb(255 247 222 / 26%),
+        0 0.12rem 0.3rem rgb(44 28 15 / 16%);
+
+    transform: translateY(1px);
+}
+
+/**
+ * Extends the selected index stock into the page edge so the tab appears
+ * physically attached to the current sheet rather than floating above it.
+ */
+.rg-casework-bookmark[data-selected="true"]::after {
+    position: absolute;
+    right: -1px;
+    bottom: -0.22rem;
+    left: -1px;
+
+    height: 0.28rem;
+
+    background: var(--color-rg-notepad-strong);
+
+    content: "";
+}
+
+.rg-casework-bookmark[aria-disabled="true"] {
+    cursor: wait;
+}
+
+/**
+ * Physical page-turn stage.
+ *
+ * This element owns page motion and clipping only. The scrolling child sheet is
+ * the actual ruled writing surface.
+ */
+.rg-casework-page-stage {
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+
+    color: var(--color-rg-paper-ink);
+    background: transparent;
+    box-shadow: none;
+
+    transform: none;
+    opacity: 1;
+    transform-origin: 50% 16%;
+    will-change: auto;
+}
+
+.rg-casework-page {
+    min-height: 0;
+}
+
+@keyframes rg-casework-page-leave-forward {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(-1.25rem, -0.15rem, 0) rotate(-0.55deg);
+    }
+}
+
+@keyframes rg-casework-page-leave-backward {
+    from {
+        opacity: 1;
+        transform: none;
+    }
+
+    to {
+        opacity: 0;
+        transform: translate3d(1.25rem, -0.15rem, 0) rotate(0.55deg);
+    }
+}
+
+@keyframes rg-casework-page-enter-forward {
+    from {
+        opacity: 0;
+        transform: translate3d(1.25rem, 0.2rem, 0) rotate(0.55deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@keyframes rg-casework-page-enter-backward {
+    from {
+        opacity: 0;
+        transform: translate3d(-1.25rem, 0.2rem, 0) rotate(-0.55deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.rg-casework-page-stage[data-page-phase="leaving"][data-page-direction="forward"] {
+    animation: rg-casework-page-leave-forward var(--rg-motion-document)
+        var(--rg-ease-in) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="leaving"][data-page-direction="backward"] {
+    animation: rg-casework-page-leave-backward var(--rg-motion-document)
+        var(--rg-ease-in) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="entering"][data-page-direction="forward"] {
+    animation: rg-casework-page-enter-forward var(--rg-motion-document)
+        var(--rg-ease-out) both;
+    will-change: transform, opacity;
+}
+
+.rg-casework-page-stage[data-page-phase="entering"][data-page-direction="backward"] {
+    animation: rg-casework-page-enter-backward var(--rg-motion-document)
+        var(--rg-ease-out) both;
+    will-change: transform, opacity;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Casework pre-printed form interactions                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Typed draft-state mark printed into the New Finding sheet header.
+ */
+.rg-casework-draft-state {
+    border: 1px solid rgb(93 63 34 / 62%);
+    border-radius: 0.12rem;
+    padding: 0.3rem 0.42rem 0.24rem;
+
+    color: rgb(62 40 24 / 88%);
+
+    font-family: var(--font-case);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-draft-state[data-ready="true"] {
+    border-color: rgb(92 46 34 / 72%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-0.7deg);
+}
+
+/**
+ * Quiet inline filing note. Guidance stays on the sheet rather than becoming a
+ * rounded application-card empty state.
+ */
+.rg-casework-inline-note {
+    border-left: 2px solid rgb(91 61 35 / 46%);
+}
+
+/**
+ * Native checkbox presentation for evidence and Evidence Thread support rows.
+ *
+ * A completed box uses an oxblood fill and cream check. The row also receives a
+ * restrained filing wash so selection is visible without relying on the check
+ * glyph alone.
+ */
+.rg-casework-check-row {
+    border-bottom: 1px solid rgb(93 67 38 / 24%);
+
+    transition:
+        background-color var(--rg-motion-quiet) var(--rg-ease-out),
+        box-shadow var(--rg-motion-quiet) var(--rg-ease-out),
+        color var(--rg-motion-quiet) var(--rg-ease-out);
+}
+
+.rg-casework-check-row:hover {
+    background: rgb(75 49 28 / 8%);
+}
+
+.rg-casework-check-row[data-checked="true"] {
+    background: rgb(111 35 29 / 9%);
+    box-shadow: none;
+}
+
+.rg-casework-check-row[data-checked="true"] .rg-casework-support-title {
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-check-mark {
+    position: relative;
+
+    display: block;
+    width: 1.05rem;
+    height: 1.05rem;
+
+    border: 1px solid rgb(71 46 27 / 78%);
+    border-radius: 0.08rem;
+
+    background: rgb(238 219 170 / 18%);
+
+    transition:
+        border-color var(--rg-motion-quiet) var(--rg-ease-out),
+        background-color var(--rg-motion-quiet) var(--rg-ease-out),
+        box-shadow var(--rg-motion-quiet) var(--rg-ease-out);
+}
+
+.rg-casework-check-input:checked + .rg-casework-check-mark {
+    border-color: rgb(111 35 29 / 96%);
+    background: var(--color-rg-stamp-dark);
+    box-shadow: inset 0 0 0 1px rgb(255 240 198 / 10%);
+}
+
+.rg-casework-check-input:checked + .rg-casework-check-mark::after {
+    position: absolute;
+    top: 0.03rem;
+    left: 0.23rem;
+
+    width: 0.42rem;
+    height: 0.7rem;
+
+    border-right: 2px solid rgb(238 219 177);
+    border-bottom: 2px solid rgb(238 219 177);
+
+    content: "";
+    transform: rotate(41deg);
+}
+
+.rg-casework-check-input:focus-visible + .rg-casework-check-mark {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+/**
+ * One pre-printed case-classification row. Selection uses a margin filing mark,
+ * a stronger paper wash, and a filled classification code impression.
+ */
+.rg-casework-classification-row {
+    border-bottom: 1px solid rgb(93 67 38 / 28%);
+
+    transition:
+        background-color var(--rg-motion-quiet) var(--rg-ease-out),
+        box-shadow var(--rg-motion-quiet) var(--rg-ease-out);
+}
+
+.rg-casework-classification-row:hover {
+    background: rgb(75 49 28 / 8%);
+}
+
+.rg-casework-classification-row[data-selected="true"] {
+    background: rgb(161 61 45 / 11%);
+    box-shadow: none;
+}
+
+.rg-casework-classification-row[data-selected="true"]
+    .rg-casework-classification-title {
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-classification-row:focus-visible {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-classification-mark {
+    position: relative;
+
+    width: 1rem;
+    height: 1rem;
+
+    border: 1px solid rgb(79 51 29 / 66%);
+    border-radius: 0.08rem;
+
+    transition:
+        border-color var(--rg-motion-quiet) var(--rg-ease-out),
+        background-color var(--rg-motion-quiet) var(--rg-ease-out);
+}
+
+.rg-casework-classification-row[data-selected="true"]
+    .rg-casework-classification-mark {
+    border-color: rgb(111 35 29 / 96%);
+    background: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-classification-row[data-selected="true"]
+    .rg-casework-classification-mark::after {
+    position: absolute;
+    top: 0.02rem;
+    left: 0.23rem;
+
+    width: 0.4rem;
+    height: 0.68rem;
+
+    border-right: 2px solid rgb(238 219 177);
+    border-bottom: 2px solid rgb(238 219 177);
+
+    content: "";
+    transform: rotate(42deg);
+}
+
+.rg-casework-classification-code {
+    border: 1px solid rgb(91 50 32 / 52%);
+    border-radius: 0.08rem;
+    padding: 0.2rem 0.3rem 0.15rem;
+
+    color: rgb(73 43 28 / 88%);
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+
+    transition:
+        border-color var(--rg-motion-quiet) var(--rg-ease-out),
+        background-color var(--rg-motion-quiet) var(--rg-ease-out),
+        color var(--rg-motion-quiet) var(--rg-ease-out),
+        transform var(--rg-motion-quiet) var(--rg-ease-out);
+}
+
+.rg-casework-classification-row[data-selected="true"]
+    .rg-casework-classification-code {
+    border-color: rgb(111 35 29 / 92%);
+    background: var(--color-rg-stamp-dark);
+    color: rgb(238 219 177);
+
+    box-shadow:
+        inset 0 0 0 1px rgb(255 240 198 / 10%),
+        0 1px 0 rgb(255 246 210 / 12%);
+
+    transform: rotate(-0.5deg);
+}
+
+/**
+ * Severity is selected through native radio controls and presented as an
+ * investigator-drawn oval. Each severity receives a fixed path so the mark is
+ * irregular but deterministic.
+ */
+.rg-casework-severity-option {
+    border-bottom: 1px solid rgb(93 67 38 / 26%);
+}
+
+.rg-casework-severity-option:hover {
+    background: rgb(75 49 28 / 7%);
+}
+
+.rg-casework-severity-focus {
+    pointer-events: none;
+}
+
+.rg-casework-severity-option input:focus-visible + .rg-casework-severity-focus {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-severity-oval {
+    pointer-events: none;
+    overflow: visible;
+}
+
+.rg-casework-severity-oval__path {
+    fill: none;
+    stroke: rgb(82 47 35 / 92%);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+
+    animation: rg-casework-draw-severity-oval 210ms var(--rg-ease-out) forwards;
+}
+
+@keyframes rg-casework-draw-severity-oval {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/**
+ * Handwritten investigator-note field on the ruled Notepad stock.
+ */
+.rg-casework-note-input {
+    border: 0;
+    border-bottom: 1px solid rgb(93 67 38 / 36%);
+    border-radius: 0;
+
+    background: rgb(245 226 179 / 7%);
+
+    box-shadow: none;
+}
+
+.rg-casework-note-input:focus-visible {
+    outline: 2px solid rgb(111 35 29 / 58%);
+    outline-offset: 2px;
+}
+
+/**
+ * Filing-readiness marks are visual feedback only. Gameplay readiness remains
+ * controlled by the existing canFileFinding rule.
+ */
+.rg-casework-checklist-mark {
+    position: relative;
+
+    width: 0.95rem;
+    height: 0.95rem;
+    flex: 0 0 auto;
+
+    border: 1px solid rgb(76 49 28 / 68%);
+    border-radius: 0.08rem;
+}
+
+.rg-casework-checklist-mark[data-complete="true"] {
+    border-color: rgb(111 35 29 / 92%);
+    background: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-checklist-mark[data-complete="true"]::after {
+    position: absolute;
+    top: -0.02rem;
+    left: 0.21rem;
+
+    width: 0.38rem;
+    height: 0.64rem;
+
+    border-right: 2px solid rgb(238 219 177);
+    border-bottom: 2px solid rgb(238 219 177);
+
+    content: "";
+    transform: rotate(41deg);
+}
+
+.rg-casework-filing-mark {
+    border: 1px solid rgb(81 53 31 / 58%);
+    border-radius: 0.08rem;
+    padding: 0.28rem 0.38rem 0.22rem;
+
+    color: rgb(67 43 26 / 78%);
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-filing-mark--complete {
+    border-color: rgb(111 35 29 / 78%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-1deg);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Filed case ledger                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Empty filed-ledger note printed directly on the sheet.
+ */
+.rg-casework-filed-empty {
+    padding-inline-start: 1rem;
+    border-inline-start: 3px solid rgb(111 35 29 / 38%);
+}
+
+/**
+ * Filed findings are margin-owned ledger records rather than cards.
+ *
+ * Each record reserves the same 3.25rem filing gutter used by the New Finding
+ * form. The content column therefore begins to the right of the physical margin
+ * line and keeps one writing grammar across all Notepad sections.
+ */
+.rg-casework-filed-ledger {
+    min-width: 0;
+}
+
+.rg-casework-filed-record {
+    position: relative;
+    min-width: 0;
+    isolation: isolate;
+}
+
+/**
+ * A strong double ledger rule marks a whole-record boundary. Internal record
+ * sections rely on spacing and typed labels so record and subsection rules do
+ * not compete with one another.
+ */
+.rg-casework-filed-record + .rg-casework-filed-record {
+    margin-top: 1.25rem;
+    border-top: 4px double rgb(86 58 33 / 58%);
+}
+
+.rg-casework-filed-gutter {
+    position: relative;
+    min-width: 0;
+    padding-top: 1.55rem;
+}
+
+.rg-casework-filed-gutter::after {
+    position: absolute;
+    top: 3.25rem;
+    right: 0;
+    bottom: 1.25rem;
+
+    width: 2px;
+
+    background: rgb(111 35 29 / 58%);
+
+    content: "";
+}
+
+.rg-casework-filed-gutter::before {
+    position: absolute;
+    right: -0.42rem;
+    bottom: 1.25rem;
+
+    width: 0.42rem;
+    height: 2px;
+
+    background: rgb(111 35 29 / 58%);
+
+    content: "";
+}
+
+.rg-casework-filed-number {
+    display: block;
+    padding-inline-start: 0.15rem;
+
+    color: rgb(111 35 29 / 82%);
+
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    line-height: 1;
+}
+
+.rg-casework-filed-body {
+    min-width: 0;
+}
+
+.rg-casework-filed-header {
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgb(93 67 38 / 34%);
+}
+
+.rg-casework-filed-section {
+    min-width: 0;
+}
+
+.rg-casework-filed-code,
+.rg-casework-filed-severity {
+    border: 1px solid rgb(91 50 32 / 54%);
+    border-radius: 0.08rem;
+    padding: 0.22rem 0.32rem 0.16rem;
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-filed-code {
+    color: rgb(73 43 28 / 88%);
+}
+
+.rg-casework-filed-severity {
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-filed-severity[data-severity="low"] {
+    opacity: 0.72;
+}
+
+.rg-casework-filed-severity[data-severity="medium"] {
+    border-style: double;
+}
+
+.rg-casework-filed-severity[data-severity="high"] {
+    border-width: 2px;
+    transform: rotate(-0.5deg);
+}
+
+.rg-casework-filed-severity[data-severity="critical"] {
+    border-width: 2px;
+    background: rgb(111 35 29 / 10%);
+    transform: rotate(-1deg);
+}
+
+.rg-casework-filed-thread-line {
+    padding: 0.2rem 0 0.3rem 0.85rem;
+    border-inline-start: 2px solid rgb(91 61 35 / 42%);
+}
+
+/**
+ * Right-header erase control for one filed record.
+ */
+.rg-casework-filed-remove {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+
+    border: 1px solid transparent;
+    border-radius: 0.14rem;
+
+    background: transparent;
+    color: rgb(111 35 29 / 72%);
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out),
+        color var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-filed-remove:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgb(111 35 29 / 52%);
+    background: rgb(111 35 29 / 8%);
+    color: var(--color-rg-stamp-dark);
+}
+
+.rg-casework-filed-remove:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.rg-casework-filed-remove:focus-visible {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-filed-remove:disabled {
+    cursor: wait;
+}
+
+/**
+ * Presentation-only ink-lift erase pass.
+ *
+ * A paper-coloured wipe crosses from right to left while the filed ink fades and
+ * the visible record closes. The React component commits the existing remove
+ * handler after the same fixed 220ms duration; reduced motion bypasses this
+ * local presentation state and removes immediately.
+ */
+.rg-casework-filed-record[data-erasing="true"] {
+    overflow: hidden;
+    pointer-events: none;
+
+    animation: rg-casework-filed-record-close var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+.rg-casework-filed-record[data-erasing="true"] > * {
+    animation: rg-casework-filed-ink-lift var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+.rg-casework-filed-record::after {
+    position: absolute;
+    inset: -0.25rem auto -0.25rem 0;
+    z-index: 5;
+
+    width: 42%;
+
+    background:
+        radial-gradient(
+            circle at 18% 28%,
+            rgb(91 65 36 / 14%) 0 0.6px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            transparent,
+            rgb(225 200 143 / 72%) 18%,
+            rgb(229 207 154 / 96%) 50%,
+            rgb(225 200 143 / 72%) 82%,
+            transparent
+        );
+
+    background-size:
+        19px 23px,
+        100% 100%;
+
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(245%);
+}
+
+.rg-casework-filed-record[data-erasing="true"]::after {
+    animation: rg-casework-filed-erase-sweep var(--rg-filed-erase-duration)
+        var(--rg-ease-in) both;
+}
+
+@keyframes rg-casework-filed-erase-sweep {
+    0% {
+        opacity: 0;
+        transform: translateX(245%);
+    }
+
+    12% {
+        opacity: 0.88;
+    }
+
+    78% {
+        opacity: 0.96;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-125%);
+    }
+}
+
+@keyframes rg-casework-filed-ink-lift {
+    0%,
+    28% {
+        opacity: 1;
+        filter: none;
+    }
+
+    72% {
+        opacity: 0.48;
+        filter: blur(0.3px);
+    }
+
+    100% {
+        opacity: 0;
+        filter: blur(0.8px);
+    }
+}
+
+@keyframes rg-casework-filed-record-close {
+    0%,
+    68% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        clip-path: inset(0 0 100% 0);
+        transform: translateY(-0.18rem);
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Verdict stamp and report filing                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Typed state marker for the current release-decision sheet.
+ */
+.rg-casework-verdict-state {
+    border: 1px solid rgb(81 53 31 / 58%);
+    border-radius: 0.08rem;
+    padding: 0.3rem 0.42rem 0.24rem;
+
+    color: rgb(67 43 26 / 78%);
+
+    font-family: var(--font-case);
+    font-size: 0.54rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-verdict-state[data-stamped="true"] {
+    border-color: rgb(111 35 29 / 78%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-0.7deg);
+}
+
+/**
+ * Dry rubber verdict stamp face.
+ *
+ * Verdict identity uses fixed deterministic rotations. Selection strengthens the
+ * ink impression instead of converting the option into a filled UI card.
+ */
+.rg-casework-verdict-stamp {
+    --rg-verdict-rotation: -0.6deg;
+
+    position: relative;
+    min-height: 7.25rem;
+    padding: 1rem 0.9rem 0.8rem;
+
+    border: 1px solid rgb(93 67 38 / 30%);
+    border-radius: 0.16rem;
+
+    background: rgb(245 226 179 / 6%);
+    color: var(--color-rg-paper-ink);
+
+    text-align: center;
+
+    transition:
+        transform var(--rg-motion-control) var(--rg-ease-out),
+        border-color var(--rg-motion-control) var(--rg-ease-out),
+        background-color var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-verdict-stamp[data-verdict="watch"] {
+    --rg-verdict-rotation: 0.7deg;
+}
+
+.rg-casework-verdict-stamp[data-verdict="hold"] {
+    --rg-verdict-rotation: 0.35deg;
+}
+
+.rg-casework-verdict-stamp[data-verdict="block"] {
+    --rg-verdict-rotation: -0.9deg;
+}
+
+.rg-casework-verdict-stamp:hover {
+    border-color: rgb(111 35 29 / 48%);
+    background: rgb(111 35 29 / 5%);
+}
+
+.rg-casework-verdict-stamp:active {
+    transform: translateY(2px);
+}
+
+.rg-casework-verdict-stamp:focus-visible {
+    outline: 2px solid var(--color-rg-stamp-dark);
+    outline-offset: 2px;
+}
+
+.rg-casework-verdict-stamp__impression {
+    display: block;
+
+    color: rgb(111 35 29 / 38%);
+
+    font-family: var(--font-display);
+    font-size: clamp(1.35rem, 1.2rem + 0.35vw, 1.65rem);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+
+    text-shadow:
+        1px 0 rgb(111 35 29 / 7%),
+        -1px 1px rgb(111 35 29 / 5%);
+
+    transform: rotate(var(--rg-verdict-rotation));
+
+    transition:
+        color var(--rg-motion-control) var(--rg-ease-out),
+        opacity var(--rg-motion-control) var(--rg-ease-out);
+}
+
+.rg-casework-verdict-stamp__description {
+    display: block;
+    margin-top: 0.85rem;
+
+    color: rgb(56 39 26 / 66%);
+
+    font-family: var(--font-case);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.rg-casework-verdict-stamp__state {
+    display: block;
+    margin-top: 0.75rem;
+
+    color: rgb(73 43 28 / 58%);
+
+    font-family: var(--font-mono);
+    font-size: 0.5rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.rg-casework-verdict-stamp[data-selected="true"] {
+    border-color: rgb(111 35 29 / 58%);
+    background: rgb(111 35 29 / 7%);
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__impression {
+    color: rgb(111 35 29 / 92%);
+
+    animation: rg-casework-verdict-stamp-press 180ms var(--rg-ease-out) both;
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__description {
+    color: rgb(56 39 26 / 82%);
+}
+
+.rg-casework-verdict-stamp[data-selected="true"]
+    .rg-casework-verdict-stamp__state {
+    color: var(--color-rg-stamp-dark);
+}
+
+@keyframes rg-casework-verdict-stamp-press {
+    from {
+        opacity: 0.5;
+        transform: translateY(-0.18rem) scale(1.08)
+            rotate(var(--rg-verdict-rotation));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(var(--rg-verdict-rotation));
+    }
+}
+
+/**
+ * Verdict-page readiness marker reuses the New Finding filing language while
+ * allowing the Verdict page to expose its own ready/incomplete state.
+ */
+.rg-casework-filing-mark[data-ready="true"] {
+    border-color: rgb(111 35 29 / 78%);
+    color: var(--color-rg-stamp-dark);
+    transform: rotate(-1deg);
 }
