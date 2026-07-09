@@ -14,9 +14,17 @@ import { Button, buttonClassName } from "../../components/ui/Button";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Panel } from "../../components/ui/Panel";
 
-import { Archive, ChevronLeft, ChevronRight, NotepadText } from "lucide-react";
+import {
+    Archive,
+    ChevronLeft,
+    ChevronRight,
+    NotepadText,
+    Pin,
+    ScanSearch,
+} from "lucide-react";
 
 import type {
+    EvidenceType,
     FamilyReferenceDefinition,
     ReleaseTicketDefinition,
     ShiftDefinition,
@@ -384,7 +392,7 @@ function getWorkspaceGridColumns({
     isCabinetOpen,
     isCaseworkOpen,
 }: WorkspaceGridColumnsInput): string {
-    const cabinetColumn = isCabinetOpen ? "clamp(17rem, 24vw, 24rem)" : "48px";
+    const cabinetColumn = isCabinetOpen ? "clamp(19rem, 27vw, 27rem)" : "48px";
 
     const caseworkColumn = isCaseworkOpen
         ? "clamp(20rem, 31vw, 32.5rem)"
@@ -406,11 +414,54 @@ interface EvidenceCabinetPanelProps {
 }
 
 /**
- * Evidence file cabinet.
+ * Human-readable labels for the authored evidence-file register.
+ */
+const evidenceFileTypeLabelById: Record<EvidenceType, string> = {
+    "qa-note": "QA Note",
+    "pull-request-comment": "PR Comment",
+    "support-ticket": "Support Record",
+    "release-note": "Release Note",
+};
+
+const evidenceDrawerClassName = [
+    "rg-investigation-major-object relative h-full min-h-0 overflow-hidden",
+    "rounded-[0.48rem] border border-[rgb(75_46_28_/_88%)] p-3",
+    "bg-[linear-gradient(90deg,rgb(241_211_165_/_3%),transparent_17%,transparent_82%,rgb(12_8_6_/_25%)),linear-gradient(180deg,rgb(76_45_27),rgb(46_28_19)_62%,rgb(31_20_15))]",
+    "shadow-[inset_0_1px_0_rgb(245_222_186_/_5%),inset_-0.5rem_0_1rem_rgb(17_10_7_/_20%),0.45rem_0.7rem_1.5rem_rgb(0_0_0_/_28%)]",
+    "before:pointer-events-none before:absolute before:inset-0 before:z-0",
+    "before:bg-[linear-gradient(92deg,transparent_0_21%,rgb(228_189_133_/_3%)_21.4%,transparent_22%),linear-gradient(87deg,transparent_0_69%,rgb(18_10_7_/_6%)_69.5%,transparent_70%)]",
+    "before:content-['']",
+].join(" ");
+
+const evidenceFileSlipClassName = [
+    "relative min-w-0 overflow-hidden rounded-[0.2rem]",
+    "border border-[rgb(70_44_25_/_58%)] text-rg-paper-ink",
+    "bg-[radial-gradient(ellipse_at_12%_8%,rgb(255_247_218_/_12%),transparent_34%),radial-gradient(circle_at_81%_72%,rgb(65_39_22_/_5%)_0_0.7px,transparent_1.1px),linear-gradient(145deg,rgb(216_194_151),rgb(196_164_113)_63%,rgb(174_132_82))]",
+    "bg-[length:100%_100%,113px_101px,100%_100%]",
+    "shadow-[0.18rem_0.28rem_0.55rem_rgb(0_0_0_/_22%),inset_0_1px_0_rgb(255_255_255_/_11%)]",
+    "transition-[transform,border-color,box-shadow] duration-[var(--rg-motion-control)] ease-[var(--rg-ease-out)]",
+    "before:absolute before:left-[1.05rem] before:top-[-1px] before:z-[2] before:h-[0.4rem] before:w-[1.8rem]",
+    "before:rounded-b-[0.2rem] before:border before:border-t-0 before:border-[rgb(35_24_17_/_72%)]",
+    "before:bg-[linear-gradient(180deg,rgb(91_72_53),rgb(46_35_26))] before:shadow-[0_0.12rem_0.22rem_rgb(0_0_0_/_22%)] before:content-['']",
+    "hover:-translate-y-px hover:border-[rgb(112_72_37_/_78%)] hover:shadow-[0.24rem_0.38rem_0.7rem_rgb(0_0_0_/_26%),inset_0_1px_0_rgb(255_255_255_/_12%)]",
+].join(" ");
+
+const evidenceFileActionClassName = [
+    "inline-flex min-h-[1.4rem] items-center justify-center gap-1",
+    "rounded-[0.14rem] border border-[rgb(72_46_27_/_50%)] px-1.5 py-0.5",
+    "bg-[rgb(75_48_28_/_6%)] font-case font-bold uppercase leading-none tracking-[0.025em] text-[rgb(54_35_22_/_92%)]",
+    "transition-[transform,border-color,background-color,color] duration-[var(--rg-motion-control)] ease-[var(--rg-ease-out)]",
+    "hover:not-disabled:-translate-y-px hover:not-disabled:border-[rgb(111_68_34_/_78%)] hover:not-disabled:bg-[rgb(75_48_28_/_12%)]",
+    "active:not-disabled:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-rg-stamp-dark",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+].join(" ");
+
+/**
+ * Shallow evidence-file drawer for the current ticket.
  *
- * Evidence actions remain direct object actions:
- * - inspect from the evidence card,
- * - pin from the evidence card after inspection.
+ * This component owns its one-off physical composition through Tailwind. The
+ * fixed header remains outside the drawer's only vertical scroll owner, while
+ * stable FILE numbers stay separate from live UNSEEN / SEEN / PINNED state.
  */
 function EvidenceCabinetPanel({
     controller,
@@ -419,13 +470,9 @@ function EvidenceCabinetPanel({
     ticket,
 }: EvidenceCabinetPanelProps) {
     return (
-        <Panel
-            className="rg-investigation-major-object h-full min-h-0"
-            padding="sm"
-            tone="folder"
-        >
-            <div className="flex h-full min-h-0 flex-col">
-                <div className="mb-3 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/50 pb-2">
+        <section className={evidenceDrawerClassName}>
+            <div className="relative z-10 flex h-full min-h-0 flex-col">
+                <header className="mb-2 flex shrink-0 items-start justify-between gap-2 border-b border-rg-border-soft/55 pb-2">
                     <div className="min-w-0">
                         <p className="font-mono text-[0.62rem] font-extrabold uppercase tracking-[0.2em] text-rg-amber">
                             Evidence
@@ -436,18 +483,18 @@ function EvidenceCabinetPanel({
                                 File Drawer
                             </h2>
 
-                            <Badge tone="cork">
-                                {ticket.evidenceCards.length}
-                            </Badge>
+                            <span className="inline-flex min-h-[1.45rem] items-center rounded-[0.12rem] border border-rg-amber/40 px-1.5 pb-[0.15rem] pt-0.5 font-mono text-[0.55rem] font-extrabold uppercase leading-none tracking-[0.08em] text-[rgb(229_203_158_/_78%)]">
+                                {ticket.evidenceCards.length} files
+                            </span>
                         </div>
                     </div>
 
                     <Button
-                        aria-label="Collapse evidence cabinet"
+                        aria-label="Collapse evidence drawer"
                         className="h-8 w-8 shrink-0 px-0 text-rg-amber"
                         onClick={onCollapse}
                         size="sm"
-                        title="Collapse evidence cabinet"
+                        title="Collapse evidence drawer"
                         variant="secondary"
                     >
                         <ChevronLeft
@@ -456,107 +503,151 @@ function EvidenceCabinetPanel({
                             strokeWidth={2.3}
                         />
                     </Button>
-                </div>
+                </header>
 
-                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                    <div className="grid gap-2 pb-2">
+                <div className="rg-scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-[0.24rem] border border-[rgb(20_12_9_/_76%)] bg-[linear-gradient(90deg,rgb(255_233_190_/_2%),transparent_20%),linear-gradient(180deg,rgb(28_18_13),rgb(17_12_9))] shadow-[inset_0_0.55rem_0.9rem_rgb(0_0_0_/_34%),inset_0_0_0_1px_rgb(244_212_164_/_3%)]">
+                    <div className="grid gap-3 px-3.5 py-2.5">
                         {controller.evidenceItems.map(
                             (
                                 { evidenceCard, isInspected, isPinned },
                                 index,
-                            ) => (
-                                <article
-                                    className="min-w-0 cursor-pointer rounded-2xl border border-rg-border-soft bg-rg-surface/78 p-3 shadow-lg shadow-black/20 transition hover:border-rg-amber/60 hover:bg-rg-surface-raised"
-                                    key={evidenceCard.id}
-                                    onClick={() =>
-                                        controller.activateCabinetEvidence(
-                                            evidenceCard.id,
-                                        )
-                                    }
-                                    title="Inspect this evidence file."
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <p className="line-clamp-2 font-bold leading-5 text-rg-text">
-                                                {evidenceCard.title}
-                                            </p>
+                            ) => {
+                                const fileNumber = String(index + 1).padStart(
+                                    2,
+                                    "0",
+                                );
+                                const fileState = isPinned
+                                    ? "pinned"
+                                    : isInspected
+                                      ? "seen"
+                                      : "unseen";
+                                const fileStateClassName =
+                                    fileState === "pinned"
+                                        ? "border-[rgb(76_104_52_/_72%)] text-[rgb(56_85_37_/_96%)]"
+                                        : fileState === "seen"
+                                          ? "border-[rgb(132_88_37_/_66%)] text-[rgb(104_66_26_/_92%)]"
+                                          : "border-[rgb(73_47_27_/_44%)] text-[rgb(68_44_27_/_70%)]";
 
-                                            <p className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-rg-muted">
-                                                {evidenceCard.source}
-                                            </p>
-                                        </div>
-
-                                        <Badge
-                                            tone={
-                                                isPinned
-                                                    ? "success"
-                                                    : isInspected
-                                                      ? "warning"
-                                                      : "neutral"
-                                            }
-                                        >
-                                            {isPinned
-                                                ? "Pinned"
-                                                : isInspected
-                                                  ? "Seen"
-                                                  : `#${index + 1}`}
-                                        </Badge>
-                                    </div>
-
-                                    <p className="mt-3 line-clamp-2 break-words text-xs leading-5 text-rg-muted">
-                                        {evidenceCard.body}
-                                    </p>
-
-                                    <div
-                                        className="mt-3 flex flex-wrap gap-1.5"
-                                        onClick={(event) =>
-                                            event.stopPropagation()
-                                        }
+                                return (
+                                    <article
+                                        className={evidenceFileSlipClassName}
+                                        data-state={fileState}
+                                        key={evidenceCard.id}
                                     >
-                                        <Button
-                                            className="h-8"
+                                        <button
+                                            className="block w-full min-w-0 px-3 pb-2.5 pt-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-rg-stamp-dark"
                                             onClick={() =>
-                                                controller.openEvidencePreview(
+                                                controller.activateCabinetEvidence(
                                                     evidenceCard.id,
                                                 )
                                             }
-                                            size="sm"
-                                            title="Inspect evidence file"
-                                            variant="secondary"
+                                            title="Inspect this evidence file."
+                                            type="button"
                                         >
-                                            ⌕ Inspect
-                                        </Button>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="font-mono text-[0.58rem] font-extrabold uppercase leading-none tracking-[0.1em] text-[rgb(63_40_23_/_74%)]">
+                                                    File {fileNumber}
+                                                </span>
 
-                                        <Button
-                                            className="h-8"
-                                            disabled={!isInspected || isPinned}
-                                            onClick={() =>
-                                                onPinEvidence(evidenceCard.id)
-                                            }
-                                            size="sm"
-                                            title={
-                                                isPinned
-                                                    ? "This evidence is already pinned."
-                                                    : isInspected
-                                                      ? "Pin this evidence to the board."
-                                                      : "Inspect this evidence before pinning it."
-                                            }
-                                            variant="ghost"
-                                        >
-                                            {isPinned
-                                                ? "Pinned"
-                                                : "◇ Pin to Board"}
-                                        </Button>
-                                    </div>
-                                </article>
-                            ),
+                                                <span
+                                                    className={cn(
+                                                        "inline-flex min-h-[1.3rem] items-center rounded-[0.08rem] border px-[0.36rem] pb-[0.15rem] pt-0.5 font-case text-[0.54rem] font-bold uppercase leading-none tracking-[0.07em]",
+                                                        fileStateClassName,
+                                                    )}
+                                                >
+                                                    {fileState}
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-2 line-clamp-2 font-case text-sm font-bold leading-5 text-rg-paper-ink">
+                                                {evidenceCard.title}
+                                            </p>
+
+                                            <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2 border-b border-rg-folder-dark/25 pb-1.5">
+                                                <span className="min-w-0 truncate font-mono text-[0.57rem] font-bold uppercase tracking-[0.1em] text-rg-paper-ink/65">
+                                                    {evidenceCard.source}
+                                                </span>
+
+                                                <span className="shrink-0 font-case text-[0.58rem] font-bold uppercase tracking-[0.06em] text-rg-paper-ink/70">
+                                                    {
+                                                        evidenceFileTypeLabelById[
+                                                            evidenceCard.type
+                                                        ]
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-2 line-clamp-2 break-words font-case text-xs font-bold leading-5 text-rg-paper-ink/72">
+                                                {evidenceCard.body}
+                                            </p>
+                                        </button>
+
+                                        <footer className="flex items-center justify-between gap-2 border-t border-rg-folder-dark/28 px-3 py-2 text-[0.7rem]">
+                                            <button
+                                                className={
+                                                    evidenceFileActionClassName
+                                                }
+                                                onClick={() =>
+                                                    controller.openEvidencePreview(
+                                                        evidenceCard.id,
+                                                    )
+                                                }
+                                                title="Inspect evidence file"
+                                                type="button"
+                                            >
+                                                <ScanSearch
+                                                    aria-hidden="true"
+                                                    className="h-3 w-3"
+                                                    strokeWidth={2.1}
+                                                />
+                                                Inspect
+                                            </button>
+
+                                            <button
+                                                className={cn(
+                                                    evidenceFileActionClassName,
+                                                    !isPinned &&
+                                                        "text-[rgb(96_57_27_/_96%)]",
+                                                )}
+                                                disabled={
+                                                    !isInspected || isPinned
+                                                }
+                                                onClick={() =>
+                                                    onPinEvidence(
+                                                        evidenceCard.id,
+                                                    )
+                                                }
+                                                title={
+                                                    isPinned
+                                                        ? "This evidence is already pinned."
+                                                        : isInspected
+                                                          ? "Pin this evidence to the Board."
+                                                          : "Inspect this evidence before pinning it."
+                                                }
+                                                type="button"
+                                            >
+                                                <Pin
+                                                    aria-hidden="true"
+                                                    className="h-3 w-3"
+                                                    strokeWidth={2.1}
+                                                />
+
+                                                {isPinned
+                                                    ? "Pinned"
+                                                    : "Pin to Board"}
+                                            </button>
+                                        </footer>
+                                    </article>
+                                );
+                            },
                         )}
                     </div>
                 </div>
             </div>
-        </Panel>
+        </section>
     );
 }
+
 interface InvestigationBoardPanelProps {
     boardViewportRef: RefObject<HTMLDivElement | null>;
     boardWorldRef: RefObject<HTMLDivElement | null>;
