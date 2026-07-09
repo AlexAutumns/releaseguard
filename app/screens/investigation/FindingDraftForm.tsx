@@ -164,13 +164,13 @@ export function FindingDraftForm({
                 <fieldset>
                     <legend className="sr-only">Finding severity</legend>
 
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 min-[1366px]:grid-cols-4">
                         {severityOptions.map((option) => {
                             const isSelected = draft.severity === option.id;
 
                             return (
                                 <label
-                                    className="rg-casework-severity-option relative grid min-h-11 cursor-pointer place-items-center px-2 py-1.5"
+                                    className="rg-casework-severity-option relative grid min-h-11 min-w-0 cursor-pointer place-items-center px-2 py-1.5"
                                     data-selected={
                                         isSelected ? "true" : "false"
                                     }
